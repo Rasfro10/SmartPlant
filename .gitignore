@@ -1,0 +1,66 @@
+# Composer dependency directories
+/vendor/
+/composer.lock
+
+# Laravel specific
+/.env
+/.env.*.php
+/.phpunit.result.cache
+/storage/*.key
+/storage/logs/*.log
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/testing/*
+/storage/framework/views/*
+/bootstrap/cache/*.php
+
+# PHPStorm specific
+/.idea
+*.iml
+
+# Node.js dependencies and logs (if you're using Node.js for frontend tools)
+/node_modules/
+/npm-debug.log
+/yarn-error.log
+/pnpm-debug.log
+
+# PHP Unit test results
+/phpunit.xml
+/phpunit.xml.dist
+/test-results.xml
+
+# Caches and logs
+*.log
+*.cache
+*.tmp
+/cache/
+/logs/
+
+# Ignoring compiled assets (if you compile your CSS/JS)
+/public/css/*.css
+/public/js/*.js
+/public/mix-manifest.json
+/public/hot
+
+# SASS / LESS / CSS / JS source maps
+*.map
+
+# Miscellaneous
+/.vscode/
+/.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.bak
+*.tmp
+*.sql
+*.sqlite
+
+# Backup files
+*_backup.*
+*~.bak
+*.bak~
+
+# Ignore compiled PHP extensions
+*.so
+*.dll
