@@ -1,0 +1,12 @@
+2025-04-06 18:08:42 | User ID: 1 | Registration | IP: ::1 | New user registered
+2025-04-06 18:15:33 | User ID: 1 | Session Expired | IP: localhost | Browser: Chrome | OS: Windows | Device: Desktop | Session ID: qvh94dq6ab4etg535slavnfc74
+2025-04-06 18:15:55 | User ID: 1 | Registration | IP: localhost | Browser: Chrome | OS: Windows | Device: Desktop | New user registered
+2025-04-06 22:24:45 | User ID: 1 | Login | IP: localhost | Browser: Chrome | OS: Windows | Device: Desktop | Successful login
+2025-04-06 23:25:42 | User ID: 1 | Logout | IP: localhost | Browser: Chrome | OS: Windows | Device: Desktop | User initiated logout
+2025-04-06 23:26:12 | User ID: 1 | Registration | IP: localhost | Browser: Chrome | OS: Windows | Device: Desktop | New user registered
+2025-04-06 23:34:03 | User ID: 1 | Session Expired | IP: localhost | Browser: Chrome | OS: Windows | Device: Desktop | Session ID: edcebj7jqhv25i51vtri198j9a
+2025-04-06 23:34:17 | User ID: 1 | Login | IP: localhost | Browser: Chrome | OS: Windows | Device: Desktop | Successful login
+2025-04-06 23:54:50 | User ID: 1 | Session Expired | IP: localhost | Browser: Chrome | OS: Windows | Device: Desktop | Session ID: cg82v1s6790kpu704eqarsq6ps
+2025-04-06 23:56:20 | User ID: 1 | Login | IP: localhost | Browser: Chrome | OS: Windows | Device: Desktop | Successful login
+2025-04-06 23:56:42 | User ID: 1 | Session Expired | IP: localhost | Browser: Chrome | OS: Windows | Device: Desktop | Session ID: 5rao0v5i9sfp4bha8m5voei5oi
+2025-04-06 23:57:27 | User ID: 1 | Login | IP: localhost | Browser: Chrome | OS: Windows | Device: Desktop | Successful login

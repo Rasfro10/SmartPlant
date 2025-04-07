@@ -1,0 +1,219 @@
+2025-04-02 07:26:21 - API called
+2025-04-02 07:26:21 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":0,"temperature":23.03095,"humidity":48.68056,"battery_level":100}
+2025-04-02 07:26:21 - Success: Data saved, ID 55
+2025-04-02 07:26:24 - API called
+2025-04-02 07:26:24 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.2647,"humidity":46.82726,"battery_level":100}
+2025-04-02 07:26:24 - Success: Data saved, ID 56
+2025-04-02 07:26:27 - API called
+2025-04-02 07:26:27 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.22873,"humidity":46.71788,"battery_level":100}
+2025-04-02 07:26:27 - Success: Data saved, ID 57
+2025-04-02 07:26:30 - API called
+2025-04-02 07:26:30 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.24672,"humidity":46.71788,"battery_level":100}
+2025-04-02 07:26:30 - Success: Data saved, ID 58
+2025-04-02 07:26:33 - API called
+2025-04-02 07:26:33 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.24672,"humidity":46.65104,"battery_level":100}
+2025-04-02 07:26:33 - Success: Data saved, ID 59
+2025-04-02 07:26:36 - API called
+2025-04-02 07:26:36 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.21075,"humidity":46.67231,"battery_level":100}
+2025-04-02 07:26:36 - Success: Data saved, ID 60
+2025-04-02 07:26:39 - API called
+2025-04-02 07:26:39 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":100,"light_level":-155,"temperature":23.22873,"humidity":46.66623,"battery_level":100}
+2025-04-02 07:26:39 - Success: Data saved, ID 61
+2025-04-02 07:26:43 - API called
+2025-04-02 07:26:43 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.2647,"humidity":46.70877,"battery_level":100}
+2025-04-02 07:26:43 - Success: Data saved, ID 62
+2025-04-02 07:26:46 - API called
+2025-04-02 07:26:46 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.24672,"humidity":46.6237,"battery_level":100}
+2025-04-02 07:26:46 - Success: Data saved, ID 63
+2025-04-02 07:26:49 - API called
+2025-04-02 07:26:49 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.22873,"humidity":46.58116,"battery_level":100}
+2025-04-02 07:26:49 - Success: Data saved, ID 64
+2025-04-02 07:26:52 - API called
+2025-04-02 07:26:52 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.22873,"humidity":46.63889,"battery_level":100}
+2025-04-02 07:26:52 - Success: Data saved, ID 65
+2025-04-02 07:26:55 - API called
+2025-04-02 07:26:55 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.22873,"humidity":46.61155,"battery_level":100}
+2025-04-02 07:26:55 - Success: Data saved, ID 66
+2025-04-02 07:26:58 - API called
+2025-04-02 07:26:58 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.24672,"humidity":46.54774,"battery_level":100}
+2025-04-02 07:26:58 - Success: Data saved, ID 67
+2025-04-02 07:27:01 - API called
+2025-04-02 07:27:01 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.21075,"humidity":46.5842,"battery_level":100}
+2025-04-02 07:27:01 - Success: Data saved, ID 68
+2025-04-02 07:27:04 - API called
+2025-04-02 07:27:04 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.19277,"humidity":46.52344,"battery_level":100}
+2025-04-02 07:27:04 - Success: Data saved, ID 69
+2025-04-02 07:27:07 - API called
+2025-04-02 07:27:07 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.24672,"humidity":46.52647,"battery_level":100}
+2025-04-02 07:27:07 - Success: Data saved, ID 70
+2025-04-02 07:27:10 - API called
+2025-04-02 07:27:10 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.19277,"humidity":46.57509,"battery_level":100}
+2025-04-02 07:27:10 - Success: Data saved, ID 71
+2025-04-02 07:27:13 - API called
+2025-04-02 07:27:13 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.22873,"humidity":46.60243,"battery_level":100}
+2025-04-02 07:27:13 - Success: Data saved, ID 72
+2025-04-02 07:27:16 - API called
+2025-04-02 07:27:16 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.22873,"humidity":46.51736,"battery_level":100}
+2025-04-02 07:27:16 - Success: Data saved, ID 73
+2025-04-02 07:27:19 - API called
+2025-04-02 07:27:19 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.28268,"humidity":46.51432,"battery_level":100}
+2025-04-02 07:27:19 - Success: Data saved, ID 74
+2025-04-02 07:27:22 - API called
+2025-04-02 07:27:22 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.21075,"humidity":46.52951,"battery_level":100}
+2025-04-02 07:27:22 - Success: Data saved, ID 75
+2025-04-02 07:27:25 - API called
+2025-04-02 07:27:25 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.21075,"humidity":46.51128,"battery_level":100}
+2025-04-02 07:27:25 - Success: Data saved, ID 76
+2025-04-02 07:27:28 - API called
+2025-04-02 07:27:28 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.24672,"humidity":46.50521,"battery_level":100}
+2025-04-02 07:27:28 - Success: Data saved, ID 77
+2025-04-02 07:27:31 - API called
+2025-04-02 07:27:31 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.24672,"humidity":46.51128,"battery_level":100}
+2025-04-02 07:27:31 - Success: Data saved, ID 78
+2025-04-02 07:27:34 - API called
+2025-04-02 07:27:34 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.24672,"humidity":46.46267,"battery_level":100}
+2025-04-02 07:27:35 - Success: Data saved, ID 79
+2025-04-02 07:27:38 - API called
+2025-04-02 07:27:38 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.22873,"humidity":46.52344,"battery_level":100}
+2025-04-02 07:27:38 - Success: Data saved, ID 80
+2025-04-02 07:27:41 - API called
+2025-04-02 07:27:41 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.2647,"humidity":46.44141,"battery_level":100}
+2025-04-02 07:27:41 - Success: Data saved, ID 81
+2025-04-02 07:27:44 - API called
+2025-04-02 07:27:44 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.2647,"humidity":46.3533,"battery_level":100}
+2025-04-02 07:27:44 - Success: Data saved, ID 82
+2025-04-02 07:27:47 - API called
+2025-04-02 07:27:47 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.2647,"humidity":46.38064,"battery_level":100}
+2025-04-02 07:27:47 - Success: Data saved, ID 83
+2025-04-02 07:27:50 - API called
+2025-04-02 07:27:50 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.31864,"humidity":46.41103,"battery_level":100}
+2025-04-02 07:27:50 - Success: Data saved, ID 84
+2025-04-02 07:27:53 - API called
+2025-04-02 07:27:53 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.28268,"humidity":46.38064,"battery_level":100}
+2025-04-02 07:27:53 - Success: Data saved, ID 85
+2025-04-02 07:27:56 - API called
+2025-04-02 07:27:56 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.28268,"humidity":46.3928,"battery_level":100}
+2025-04-02 07:27:56 - Success: Data saved, ID 86
+2025-04-02 07:27:59 - API called
+2025-04-02 07:27:59 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.28268,"humidity":46.36241,"battery_level":100}
+2025-04-02 07:27:59 - Success: Data saved, ID 87
+2025-04-02 07:28:02 - API called
+2025-04-02 07:28:02 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.28268,"humidity":46.36545,"battery_level":100}
+2025-04-02 07:28:02 - Success: Data saved, ID 88
+2025-04-02 07:28:05 - API called
+2025-04-02 07:28:05 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.31864,"humidity":46.35026,"battery_level":100}
+2025-04-02 07:28:05 - Success: Data saved, ID 89
+2025-04-02 07:28:08 - API called
+2025-04-02 07:28:08 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.31864,"humidity":46.3138,"battery_level":100}
+2025-04-02 07:28:08 - Success: Data saved, ID 90
+2025-04-02 07:28:11 - API called
+2025-04-02 07:28:11 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.33662,"humidity":46.31988,"battery_level":100}
+2025-04-02 07:28:11 - Success: Data saved, ID 91
+2025-04-02 07:28:14 - API called
+2025-04-02 07:28:14 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":100,"light_level":-155,"temperature":23.37258,"humidity":46.2895,"battery_level":100}
+2025-04-02 07:28:14 - Success: Data saved, ID 92
+2025-04-02 07:28:17 - API called
+2025-04-02 07:28:17 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.3546,"humidity":46.25608,"battery_level":100}
+2025-04-02 07:28:17 - Success: Data saved, ID 93
+2025-04-02 07:28:20 - API called
+2025-04-02 07:28:20 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.3546,"humidity":46.25,"battery_level":100}
+2025-04-02 07:28:20 - Success: Data saved, ID 94
+2025-04-02 07:28:23 - API called
+2025-04-02 07:28:23 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.39056,"humidity":46.26823,"battery_level":100}
+2025-04-02 07:28:23 - Success: Data saved, ID 95
+2025-04-02 07:28:27 - API called
+2025-04-02 07:28:27 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":100,"light_level":-155,"temperature":23.39056,"humidity":46.25,"battery_level":100}
+2025-04-02 07:28:27 - Success: Data saved, ID 96
+2025-04-02 07:28:30 - API called
+2025-04-02 07:28:30 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.39056,"humidity":46.1862,"battery_level":100}
+2025-04-02 07:28:30 - Success: Data saved, ID 97
+2025-04-02 07:28:33 - API called
+2025-04-02 07:28:33 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":23.42652,"humidity":46.20747,"battery_level":100}
+2025-04-02 07:28:33 - Success: Data saved, ID 98
+2025-04-02 07:46:10 - API called
+2025-04-02 07:46:10 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":67,"light_level":0,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:46:10 - Success: Data saved, ID 99
+2025-04-02 07:46:13 - API called
+2025-04-02 07:46:13 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":70,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:46:13 - Success: Data saved, ID 100
+2025-04-02 07:46:16 - API called
+2025-04-02 07:46:16 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":72,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:46:16 - Success: Data saved, ID 101
+2025-04-02 07:46:19 - API called
+2025-04-02 07:46:19 - Received data: {"api_key":"data","plant_id":1,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:46:19 - Success: Data saved, ID 102
+2025-04-02 07:46:24 - API called
+2025-04-02 07:46:24 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:46:24 - Error: Plant ID not found
+2025-04-02 07:46:28 - API called
+2025-04-02 07:46:28 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:46:28 - Error: Plant ID not found
+2025-04-02 07:46:31 - API called
+2025-04-02 07:46:31 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:46:31 - Error: Plant ID not found
+2025-04-02 07:46:34 - API called
+2025-04-02 07:46:34 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:46:34 - Error: Plant ID not found
+2025-04-02 07:46:37 - API called
+2025-04-02 07:46:37 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:46:37 - Error: Plant ID not found
+2025-04-02 07:46:40 - API called
+2025-04-02 07:46:40 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:46:40 - Error: Plant ID not found
+2025-04-02 07:46:43 - API called
+2025-04-02 07:46:43 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:46:43 - Error: Plant ID not found
+2025-04-02 07:46:46 - API called
+2025-04-02 07:46:46 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:46:46 - Error: Plant ID not found
+2025-04-02 07:46:49 - API called
+2025-04-02 07:46:49 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:46:49 - Error: Plant ID not found
+2025-04-02 07:46:52 - API called
+2025-04-02 07:46:52 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:46:52 - Error: Plant ID not found
+2025-04-02 07:46:55 - API called
+2025-04-02 07:46:55 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:46:55 - Error: Plant ID not found
+2025-04-02 07:46:58 - API called
+2025-04-02 07:46:58 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:46:58 - Error: Plant ID not found
+2025-04-02 07:47:01 - API called
+2025-04-02 07:47:01 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:47:01 - Error: Plant ID not found
+2025-04-02 07:47:04 - API called
+2025-04-02 07:47:04 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:47:04 - Error: Plant ID not found
+2025-04-02 07:47:07 - API called
+2025-04-02 07:47:07 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:47:07 - Error: Plant ID not found
+2025-04-02 07:47:10 - API called
+2025-04-02 07:47:10 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:47:10 - Error: Plant ID not found
+2025-04-02 07:47:13 - API called
+2025-04-02 07:47:13 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:47:13 - Error: Plant ID not found
+2025-04-02 07:47:16 - API called
+2025-04-02 07:47:16 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:47:16 - Error: Plant ID not found
+2025-04-02 07:47:19 - API called
+2025-04-02 07:47:19 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:47:19 - Error: Plant ID not found
+2025-04-02 07:47:22 - API called
+2025-04-02 07:47:22 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:47:22 - Error: Plant ID not found
+2025-04-02 07:47:26 - API called
+2025-04-02 07:47:26 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:47:26 - Error: Plant ID not found
+2025-04-02 07:47:29 - API called
+2025-04-02 07:47:29 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:47:29 - Error: Plant ID not found
+2025-04-02 07:47:32 - API called
+2025-04-02 07:47:32 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:47:32 - Error: Plant ID not found
+2025-04-02 07:47:35 - API called
+2025-04-02 07:47:35 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:47:35 - Error: Plant ID not found
+2025-04-02 07:47:38 - API called
+2025-04-02 07:47:38 - Received data: {"api_key":"data","plant_id":2,"soil_moisture":99,"light_level":-155,"temperature":0,"humidity":0,"battery_level":100}
+2025-04-02 07:47:38 - Error: Plant ID not found

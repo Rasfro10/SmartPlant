@@ -15,6 +15,15 @@ if (!isset($conn)) {
     require_once __DIR__ . '/../db/db_conn.php';
 }
 
+// Include notification functions
+require_once __DIR__ . '/../components/notifications-display.php';
+
+// Get notification count for sidebar indicator
+$notification_count = 0;
+if (isset($_SESSION['id'])) {
+    $notification_count = get_notification_count($conn, $_SESSION['id']);
+}
+
 // Initialize variables
 $firstname = $lastname = $email = $initials = "";
 
@@ -88,6 +97,20 @@ if (!isset($page)) {
                         <span>Mine Planter</span>
                     </a>
                 </li>
+                <!-- New Notifications Link -->
+                <li>
+                    <a href="<?= $base ?>dashboard/mine-planter/notifications.php" class="flex items-center justify-between p-3 rounded-lg <?php echo $page === 'notifications' ? 'bg-green-700 font-medium' : 'hover:bg-green-700 transition-colors'; ?>">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-bell"></i>
+                            <span>Notifikationer</span>
+                        </div>
+                        <?php if ($notification_count > 0): ?>
+                            <span class="flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5">
+                                <?php echo ($notification_count > 9) ? '9+' : $notification_count; ?>
+                            </span>
+                        <?php endif; ?>
+                    </a>
+                </li>
                 <li>
                     <a href="<?= $base ?>dashboard/statistik/" class="flex items-center space-x-3 p-3 rounded-lg <?php echo $page === 'statistics' ? 'bg-green-700 font-medium' : 'hover:bg-green-700 transition-colors'; ?>">
                         <i class="fas fa-chart-bar"></i>
@@ -109,6 +132,12 @@ if (!isset($page)) {
                     <a href="<?= $base ?>dashboard/hjaelp/" class="flex items-center space-x-3 p-3 rounded-lg <?php echo $page === 'help' ? 'bg-green-700 font-medium' : 'hover:bg-green-700 transition-colors'; ?>">
                         <i class="fas fa-question-circle"></i>
                         <span>Hjælp</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="<?= $base ?>notifications/test-notifications.php" class="flex items-center space-x-3 p-3 rounded-lg <?php echo $page === 'testNotifications' ? 'bg-green-700 font-medium' : 'hover:bg-green-700 transition-colors'; ?>">
+                        <i class="fas fa-vial"></i>
+                        <span>Test Notifikationer</span>
                     </a>
                 </li>
                 <li>

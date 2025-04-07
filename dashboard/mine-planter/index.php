@@ -49,6 +49,88 @@ if ($stmt = $conn->prepare($sql)) {
     $stmt->close();
 }
 
+// Function to get the latest sensor data for a plant
+function getLatestSensorData($plant_id, $conn)
+{
+    $data = null;
+
+    $sql = "SELECT * FROM plant_data 
+            WHERE plant_id = ? 
+            ORDER BY reading_time DESC 
+            LIMIT 1";
+
+    if ($stmt = $conn->prepare($sql)) {
+        $stmt->bind_param("i", $plant_id);
+
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
+
+            if ($row = $result->fetch_assoc()) {
+                $data = $row;
+            }
+        }
+
+        $stmt->close();
+    }
+
+    return $data;
+}
+
+// Function to determine plant status based on sensor data
+function getPlantStatus($sensorData, $plant)
+{
+    // Default status if no sensor data
+    if (!$sensorData) {
+        return [
+            'status' => 'unknown',
+            'label' => 'Ingen data',
+            'class' => 'bg-gray-500'
+        ];
+    }
+
+    // Check soil moisture (if below 30%, needs water)
+    if ($sensorData['soil_moisture'] < 30) {
+        return [
+            'status' => 'needs_water',
+            'label' => 'Behøver vand',
+            'class' => 'bg-blue-500'
+        ];
+    }
+
+    // Check light level based on plant needs
+    $lightLevel = $sensorData['light_level'];
+    $lightNeeds = $plant['light_needs'];
+
+    // If light level is low and plant needs medium or high light
+    if ($lightLevel < 30 && ($lightNeeds == 'Medium' || $lightNeeds == 'Højt')) {
+        return [
+            'status' => 'needs_light',
+            'label' => 'Behøver lys',
+            'class' => 'bg-yellow-500'
+        ];
+    }
+
+    // If all good, plant is healthy
+    return [
+        'status' => 'healthy',
+        'label' => 'Sund',
+        'class' => 'bg-green-500'
+    ];
+}
+
+// Get sensor data for all plants
+$plantsWithSensorData = [];
+foreach ($plants as $plant) {
+    $sensorData = getLatestSensorData($plant['id'], $conn);
+    $plantStatus = getPlantStatus($sensorData, $plant);
+
+    $plantsWithSensorData[] = [
+        'plant' => $plant,
+        'sensor_data' => $sensorData,
+        'status' => $plantStatus
+    ];
+}
+
 include('../../components/header.php');
 ?>
 
@@ -185,13 +267,20 @@ include('../../components/header.php');
 
                 <!-- Plants Grid -->
                 <div id="plants-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
-                    <?php if (count($plants) > 0): ?>
-                        <?php foreach ($plants as $plant): ?>
-                            <div class="bg-white rounded-lg shadow-sm plant-card plant-item" data-name="<?php echo htmlspecialchars($plant['name']); ?>" data-location="<?php echo htmlspecialchars($plant['location']); ?>">
+                    <?php if (count($plantsWithSensorData) > 0): ?>
+                        <?php foreach ($plantsWithSensorData as $data):
+                            $plant = $data['plant'];
+                            $sensorData = $data['sensor_data'];
+                            $plantStatus = $data['status'];
+                        ?>
+                            <div class="bg-white rounded-lg shadow-sm plant-card plant-item"
+                                data-name="<?php echo htmlspecialchars($plant['name']); ?>"
+                                data-location="<?php echo htmlspecialchars($plant['location']); ?>"
+                                data-plant-id="<?php echo $plant['id']; ?>">
                                 <div class="relative">
                                     <img src="../../<?php echo htmlspecialchars($plant['image_path']); ?>" alt="<?php echo htmlspecialchars($plant['name']); ?>" class="w-full h-48 object-contain rounded-t-lg">
-                                    <span class="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
-                                        Sund
+                                    <span class="plant-status-badge absolute top-2 right-2 <?php echo $plantStatus['class']; ?> text-white text-xs px-2 py-1 rounded-full">
+                                        <?php echo $plantStatus['label']; ?>
                                     </span>
                                 </div>
                                 <div class="p-4">
@@ -208,6 +297,9 @@ include('../../components/header.php');
                                                 <a href="#" class="dropdown-item delete-plant" data-plant-id="<?php echo $plant['id']; ?>">
                                                     <i class="fas fa-trash mr-2"></i> Slet
                                                 </a>
+                                                <a href="#" class="dropdown-item show-details" data-plant-id="<?php echo $plant['id']; ?>">
+                                                    <i class="fas fa-info-circle mr-2"></i> Detaljer
+                                                </a>
                                             </div>
                                         </div>
                                     </div>
@@ -215,27 +307,38 @@ include('../../components/header.php');
                                     <div class="grid grid-cols-2 gap-2">
                                         <div class="flex items-center text-sm text-gray-600">
                                             <i class="fas fa-tint text-blue-500 mr-2"></i>
-                                            <?php echo htmlspecialchars($plant['watering_frequency']); ?>
+                                            <span class="soil-moisture-value">
+                                                <?php if ($sensorData): ?>
+                                                    <?php echo number_format($sensorData['soil_moisture'], 1); ?>%
+                                                <?php else: ?>
+                                                    <?php echo htmlspecialchars($plant['watering_frequency']); ?>
+                                                <?php endif; ?>
+                                            </span>
                                         </div>
                                         <div class="flex items-center text-sm text-gray-600">
-                                            <i class="fas fa-temperature-high text-red-500 mr-2"></i> 23°C
+                                            <i class="fas fa-temperature-high text-red-500 mr-2"></i>
+                                            <span class="temperature-value">
+                                                <?php if ($sensorData): ?>
+                                                    <?php echo number_format($sensorData['temperature'], 1); ?>°C
+                                                <?php else: ?>
+                                                    --°C
+                                                <?php endif; ?>
+                                            </span>
                                         </div>
                                         <div class="flex items-center text-sm text-gray-600">
                                             <i class="fas fa-sun text-yellow-500 mr-2"></i>
-                                            <?php echo htmlspecialchars($plant['light_needs']); ?>
+                                            <span class="light-value">
+                                                <?php if ($sensorData): ?>
+                                                    <?php echo number_format($sensorData['light_level'], 0); ?> units
+                                                <?php else: ?>
+                                                    <?php echo htmlspecialchars($plant['light_needs']); ?>
+                                                <?php endif; ?>
+                                            </span>
                                         </div>
                                         <div class="flex items-center text-sm text-gray-600">
                                             <i class="fas fa-map-marker-alt text-purple-500 mr-2"></i>
                                             <?php echo htmlspecialchars($plant['location']); ?>
                                         </div>
-                                    </div>
-                                    <div class="mt-4 flex justify-between">
-                                        <button class="water-plant bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center" data-plant-id="<?php echo $plant['id']; ?>">
-                                            <i class="fas fa-tint mr-1"></i> Vand
-                                        </button>
-                                        <a href="edit-plant.php?id=<?php echo $plant['id']; ?>" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm flex items-center">
-                                            <i class="fas fa-edit mr-1"></i> Rediger
-                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -350,6 +453,84 @@ include('../../components/header.php');
                 </button>
             </div>
             <input type="hidden" id="delete-plant-id" value="">
+        </div>
+    </div>
+
+    <!-- Plant Details Modal -->
+    <div id="plant-details-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-lg max-w-2xl w-full mx-4">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-900" id="modal-plant-name">Plantenavn</h3>
+                    <button id="close-details-modal" class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="mb-6">
+                    <img id="modal-plant-image" src="" alt="Plant" class="w-full h-56 object-contain rounded-lg mb-4">
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h4 class="font-medium text-gray-800 mb-2">Sensordata</h4>
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Jordfugtighed:</span>
+                                    <span id="modal-soil-moisture" class="font-medium">N/A</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Temperatur:</span>
+                                    <span id="modal-temperature" class="font-medium">N/A</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Lysniveau:</span>
+                                    <span id="modal-light" class="font-medium">N/A</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Sidste opdatering:</span>
+                                    <span id="modal-last-updated" class="font-medium">N/A</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h4 class="font-medium text-gray-800 mb-2">Planteinformation</h4>
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Placering:</span>
+                                    <span id="modal-location" class="font-medium">N/A</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Lysbehov:</span>
+                                    <span id="modal-light-needs" class="font-medium">N/A</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Vandingsbehov:</span>
+                                    <span id="modal-watering-needs" class="font-medium">N/A</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Tilføjet:</span>
+                                    <span id="modal-added-date" class="font-medium">N/A</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                        <h4 class="font-medium text-gray-800 mb-2">Noter</h4>
+                        <p id="modal-notes" class="text-gray-600">N/A</p>
+                    </div>
+                </div>
+
+                <div class="flex space-x-4">
+                    <a id="modal-edit-link" href="#" class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 text-center rounded-lg hover:bg-gray-300 transition">
+                        <i class="fas fa-edit mr-2"></i> Rediger
+                    </a>
+                    <a id="modal-details-link" href="#" class="flex-1 px-4 py-2 bg-green-600 text-white text-center rounded-lg hover:bg-green-700 transition">
+                        <i class="fas fa-chart-line mr-2"></i> Se statistik
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -521,25 +702,163 @@ include('../../components/header.php');
                 });
             }
 
-            // Water plant functionality
-            const waterButtons = document.querySelectorAll('.water-plant');
+            // Plant Details Modal functionality
+            const detailsButtons = document.querySelectorAll('.show-details');
+            const detailsModal = document.getElementById('plant-details-modal');
+            const closeModalBtn = document.getElementById('close-details-modal');
 
-            waterButtons.forEach(button => {
-                button.addEventListener('click', function() {
+            // Function to show plant details in modal
+            function showPlantDetails(plantId) {
+                // Reset all fields to N/A first to prevent showing old data
+                document.getElementById('modal-plant-name').textContent = 'N/A';
+                document.getElementById('modal-location').textContent = 'N/A';
+                document.getElementById('modal-light-needs').textContent = 'N/A';
+                document.getElementById('modal-watering-needs').textContent = 'N/A';
+                document.getElementById('modal-added-date').textContent = 'N/A';
+                document.getElementById('modal-notes').textContent = 'N/A';
+                document.getElementById('modal-soil-moisture').textContent = 'N/A';
+                document.getElementById('modal-temperature').textContent = 'N/A';
+                document.getElementById('modal-light').textContent = 'N/A';
+                document.getElementById('modal-last-updated').textContent = 'N/A';
+                document.getElementById('modal-plant-image').src = '';
+
+                // First, get basic plant data
+                fetch(`get_plant_details.php?id=${plantId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.plant) {
+                            const plant = data.plant;
+
+                            // Populate plant details
+                            document.getElementById('modal-plant-name').textContent = plant.name || 'N/A';
+                            if (plant.image_path) {
+                                document.getElementById('modal-plant-image').src = '../../' + plant.image_path;
+                            }
+                            document.getElementById('modal-location').textContent = plant.location || 'N/A';
+                            document.getElementById('modal-light-needs').textContent = plant.light_needs || 'N/A';
+                            document.getElementById('modal-watering-needs').textContent = plant.watering_frequency || 'N/A';
+                            document.getElementById('modal-notes').textContent = plant.notes || 'N/A';
+
+                            const date = new Date(plant.created_at);
+                            document.getElementById('modal-added-date').textContent = date.toLocaleDateString('da-DK');
+
+                            // Set links
+                            document.getElementById('modal-edit-link').href = `edit-plant.php?id=${plantId}`;
+                            document.getElementById('modal-details-link').href = `plant-detail.php?id=${plantId}`;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching plant details:', error);
+                    });
+
+                // Then, get sensor data
+                fetch(`get_sensor_data.php?plant_id=${plantId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.sensor_data) {
+                            const sensorData = data.sensor_data;
+
+                            // Format sensor data with proper decimal places
+                            document.getElementById('modal-soil-moisture').textContent =
+                                parseFloat(sensorData.soil_moisture).toFixed(1) + '%';
+                            document.getElementById('modal-temperature').textContent =
+                                parseFloat(sensorData.temperature).toFixed(1) + '°C';
+                            document.getElementById('modal-light').textContent =
+                                Math.round(sensorData.light_level) + ' units';
+
+                            // Format the reading time
+                            const readingTime = new Date(sensorData.reading_time);
+                            document.getElementById('modal-last-updated').textContent =
+                                readingTime.toLocaleString('da-DK');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching sensor data:', error);
+                    });
+
+                // Show the modal
+                detailsModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden'; // Prevent scrolling when modal is open
+            }
+
+            // Add click listener to all details buttons
+            detailsButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
                     const plantId = this.getAttribute('data-plant-id');
-                    // You would typically send an AJAX request here to update the watering date
-                    // For now, just show a temporary success indicator
-                    this.innerHTML = '<i class="fas fa-check mr-1"></i> Vandet';
-                    this.classList.remove('bg-blue-500', 'hover:bg-blue-600');
-                    this.classList.add('bg-green-500', 'hover:bg-green-600');
-
-                    setTimeout(() => {
-                        this.innerHTML = '<i class="fas fa-tint mr-1"></i> Vand';
-                        this.classList.remove('bg-green-500', 'hover:bg-green-600');
-                        this.classList.add('bg-blue-500', 'hover:bg-blue-600');
-                    }, 2000);
+                    showPlantDetails(plantId);
                 });
             });
+
+            // Close modal when clicking close button
+            if (closeModalBtn) {
+                closeModalBtn.addEventListener('click', function() {
+                    detailsModal.classList.add('hidden');
+                    document.body.style.overflow = ''; // Re-enable scrolling
+                });
+            }
+
+            // Close modal when clicking outside content
+            detailsModal.addEventListener('click', function(e) {
+                if (e.target === detailsModal) {
+                    detailsModal.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }
+            });
+
+            // Close modal with Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && !detailsModal.classList.contains('hidden')) {
+                    detailsModal.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }
+            });
+
+            // Auto-refresh sensor data every 10 seconds
+            function refreshSensorData() {
+                const plantItems = document.querySelectorAll('.plant-item');
+
+                plantItems.forEach(plant => {
+                    const plantId = plant.getAttribute('data-plant-id');
+                    if (!plantId) return;
+
+                    // Fetch latest sensor data for this plant
+                    fetch(`get_sensor_data.php?plant_id=${plantId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Update soil moisture
+                                const soilElement = plant.querySelector('.soil-moisture-value');
+                                if (soilElement && data.sensor_data) {
+                                    soilElement.textContent = parseFloat(data.sensor_data.soil_moisture).toFixed(1) + '%';
+                                }
+
+                                // Update temperature
+                                const tempElement = plant.querySelector('.temperature-value');
+                                if (tempElement && data.sensor_data) {
+                                    tempElement.textContent = parseFloat(data.sensor_data.temperature).toFixed(1) + '°C';
+                                }
+
+                                // Update light
+                                const lightElement = plant.querySelector('.light-value');
+                                if (lightElement && data.sensor_data) {
+                                    lightElement.textContent = Math.round(data.sensor_data.light_level) + ' units';
+                                }
+
+                                // Update status badge
+                                const statusBadge = plant.querySelector('.plant-status-badge');
+                                if (statusBadge && data.status) {
+                                    statusBadge.className = `plant-status-badge absolute top-2 right-2 ${data.status.class} text-white text-xs px-2 py-1 rounded-full`;
+                                    statusBadge.textContent = data.status.label;
+                                }
+                            }
+                        })
+                        .catch(error => console.error('Error fetching sensor data:', error));
+                });
+            }
+
+            // Start refreshing data every 10 seconds
+            setInterval(refreshSensorData, 10000);
         });
     </script>
 </body>

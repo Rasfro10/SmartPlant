@@ -2,208 +2,292 @@
 // Start session
 session_start();
 
-// Inkluder database forbindelsen
+// Include database connection
 require_once '../db/db_conn.php';
 
-// Initialiser variabler
+// Include security functions (create this file separately)
+require_once '../includes/security.php';
+
+// If user is already logged in, redirect to dashboard
+if (isset($_SESSION["loggedin"]) && $_SESSION["loggedin"] === true) {
+    header("location: ../dashboard/");
+    exit;
+}
+
+// Initialize variables
 $email = $password = "";
 $email_err = $password_err = $signup_err = $login_err = "";
 $signup_success = false;
 
-// Behandle login-formular
+// Process login form
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
-
-    // Valider email
-    if (empty(trim($_POST["email"]))) {
-        $email_err = "Indtast venligst en email.";
+    // Verify CSRF token
+    if (!isset($_POST['csrf_token']) || !verify_csrf_token($_POST['csrf_token'])) {
+        $login_err = "Session udløbet eller ugyldig forespørgsel. Prøv igen.";
     } else {
-        $email = trim($_POST["email"]);
-    }
+        // Validate email
+        if (empty(trim($_POST["email"]))) {
+            $email_err = "Indtast venligst en email.";
+        } else {
+            $email = sanitize_input($_POST["email"]);
+        }
 
-    // Valider password
-    if (empty(trim($_POST["password"]))) {
-        $password_err = "Indtast venligst din adgangskode.";
-    } else {
-        $password = trim($_POST["password"]);
-    }
+        // Validate password
+        if (empty(trim($_POST["password"]))) {
+            $password_err = "Indtast venligst din adgangskode.";
+        } else {
+            $password = trim($_POST["password"]);
+        }
 
-    // Tjek for fejl inden login
-    if (empty($email_err) && empty($password_err)) {
-        // Forbered SELECT statement
-        $sql = "SELECT id, email, password FROM users WHERE email = ?";
+        // Check for errors before login
+        if (empty($email_err) && empty($password_err)) {
+            // Prepare SELECT statement
+            $sql = "SELECT id, email, password FROM users WHERE email = ?";
 
-        if ($stmt = $conn->prepare($sql)) {
-            // Bind variabler til prepared statement
-            $stmt->bind_param("s", $param_email);
+            if ($stmt = $conn->prepare($sql)) {
+                // Bind variables to prepared statement
+                $stmt->bind_param("s", $param_email);
 
-            // Set parametre
-            $param_email = $email;
+                // Set parameters
+                $param_email = $email;
 
-            // Forsøg at eksekvere prepared statement
-            if ($stmt->execute()) {
-                // Gem resultat
-                $stmt->store_result();
+                // Execute prepared statement
+                if ($stmt->execute()) {
+                    // Store result
+                    $stmt->store_result();
 
-                // Tjek om brugeren findes
-                if ($stmt->num_rows == 1) {
-                    // Bind resultat variabler
-                    $stmt->bind_result($id, $email, $hashed_password);
-                    if ($stmt->fetch()) {
-                        if (password_verify($password, $hashed_password)) {
-                            // Password er korrekt, start en ny session
+                    // Check if user exists
+                    if ($stmt->num_rows == 1) {
+                        // Bind result variables
+                        $stmt->bind_result($id, $email, $hashed_password);
+                        if ($stmt->fetch()) {
+                            if (password_verify($password, $hashed_password)) {
+                                // Password is correct, generate a new session ID
+                                session_regenerate_id(true);
 
-                            // Gem data i session variables
-                            $_SESSION["loggedin"] = true;
-                            $_SESSION["id"] = $id;
-                            $_SESSION["email"] = $email;
+                                // Get the new session ID
+                                $session_id = session_id();
 
-                            // Set cookie for session persistence if remember me is checked
-                            if (isset($_POST["remember-me"])) {
-                                // Set cookies to last for 30 days
-                                setcookie("user_login", $email, time() + (86400 * 30), "/");
-                                setcookie("user_id", $id, time() + (86400 * 30), "/");
-                                // Note: Do not store passwords in cookies for security reasons
+                                // Store data in session variables
+                                $_SESSION["loggedin"] = true;
+                                $_SESSION["id"] = $id;
+                                $_SESSION["email"] = $email;
+
+                                // Get client information
+                                $ip_address = $_SERVER['REMOTE_ADDR'];
+                                $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : 'Unknown';
+
+                                // Set expiration time (30 days from now if remember me is checked, otherwise 2 hours)
+                                $expiry_duration = isset($_POST["remember-me"]) ? (86400 * 30) : (7200);
+                                $expires_at = date('Y-m-d H:i:s', time() + $expiry_duration);
+
+                                // Store session in database
+                                $session_sql = "INSERT INTO user_sessions (user_id, session_id, expires_at, ip_address, user_agent) 
+                                              VALUES (?, ?, ?, ?, ?)";
+
+                                if ($session_stmt = $conn->prepare($session_sql)) {
+                                    $session_stmt->bind_param("issss", $id, $session_id, $expires_at, $ip_address, $user_agent);
+                                    $session_stmt->execute();
+                                    $session_stmt->close();
+                                }
+
+                                // Set cookie for session persistence if remember me is checked
+                                if (isset($_POST["remember-me"])) {
+                                    // Set cookies to last for 30 days with secure flags
+                                    setcookie("user_login", $email, time() + $expiry_duration, "/", "", isset($_SERVER['HTTPS']), true);
+                                    setcookie("user_id", $id, time() + $expiry_duration, "/", "", isset($_SERVER['HTTPS']), true);
+                                    setcookie("session_id", $session_id, time() + $expiry_duration, "/", "", isset($_SERVER['HTTPS']), true);
+                                }
+
+                                // Log the successful login
+                                log_auth_event($id, "Login", "Successful login");
+
+                                // Rotate CSRF token for security
+                                rotate_csrf_token();
+
+                                // Redirect to dashboard
+                                header("location: ../dashboard/");
+                                exit;
+                            } else {
+                                // Password is not correct
+                                $login_err = "Ugyldig email eller adgangskode.";
+
+                                // Log the failed login attempt
+                                log_auth_event(0, "Failed Login", "Invalid password for email: $email");
                             }
-
-                            // Redirect til dashboard
-                            header("location: ../dashboard/");
-                            exit;
-                        } else {
-                            // Password er ikke korrekt
-                            $login_err = "Ugyldig email eller adgangskode.";
                         }
+                    } else {
+                        // User does not exist
+                        $login_err = "Ugyldig email eller adgangskode.";
+
+                        // Log the failed login attempt
+                        log_auth_event(0, "Failed Login", "Email not found: $email");
                     }
                 } else {
-                    // Brugeren findes ikke
-                    $login_err = "Ugyldig email eller adgangskode.";
-                }
-            } else {
-                echo "Oops! Noget gik galt. Prøv igen senere.";
-            }
+                    echo "Oops! Noget gik galt. Prøv igen senere.";
 
-            // Luk statement
-            $stmt->close();
+                    // Log the error
+                    log_auth_event(0, "System Error", "Login query execution failed");
+                }
+
+                // Close statement
+                $stmt->close();
+            }
         }
     }
 }
 
-// Behandle registreringsformular
+// Process registration form
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['signup'])) {
-
-    // Valider fornavn
-    if (empty(trim($_POST["first-name"]))) {
-        $signup_err = "Indtast venligst dit fornavn.";
-    }
-
-    // Valider efternavn
-    if (empty(trim($_POST["last-name"])) && empty($signup_err)) {
-        $signup_err = "Indtast venligst dit efternavn.";
-    }
-
-    // Valider email
-    if (empty(trim($_POST["email"])) && empty($signup_err)) {
-        $signup_err = "Indtast venligst en email.";
+    // Verify CSRF token
+    if (!isset($_POST['csrf_token']) || !verify_csrf_token($_POST['csrf_token'])) {
+        $signup_err = "Session udløbet eller ugyldig forespørgsel. Prøv igen.";
     } else {
-        // Forbered SELECT statement for at tjekke om emailen allerede eksisterer
-        $sql = "SELECT id FROM users WHERE email = ?";
+        // Validate first name
+        if (empty(trim($_POST["first-name"]))) {
+            $signup_err = "Indtast venligst dit fornavn.";
+        }
 
-        if ($stmt = $conn->prepare($sql)) {
-            // Bind variabler til prepared statement
-            $stmt->bind_param("s", $param_email);
+        // Validate last name
+        if (empty(trim($_POST["last-name"])) && empty($signup_err)) {
+            $signup_err = "Indtast venligst dit efternavn.";
+        }
 
-            // Set parametre
-            $param_email = trim($_POST["email"]);
+        // Validate email
+        if (empty(trim($_POST["email"])) && empty($signup_err)) {
+            $signup_err = "Indtast venligst en email.";
+        } else {
+            // Prepare SELECT statement to check if email already exists
+            $sql = "SELECT id FROM users WHERE email = ?";
 
-            // Forsøg at eksekvere prepared statement
-            if ($stmt->execute()) {
-                // Gem resultat
-                $stmt->store_result();
+            if ($stmt = $conn->prepare($sql)) {
+                // Bind variables to prepared statement
+                $stmt->bind_param("s", $param_email);
 
-                if ($stmt->num_rows == 1 && empty($signup_err)) {
-                    $signup_err = "Denne email er allerede i brug.";
+                // Set parameters
+                $param_email = sanitize_input($_POST["email"]);
+
+                // Execute prepared statement
+                if ($stmt->execute()) {
+                    // Store result
+                    $stmt->store_result();
+
+                    if ($stmt->num_rows == 1 && empty($signup_err)) {
+                        $signup_err = "Denne email er allerede i brug.";
+                    } else {
+                        $email = sanitize_input($_POST["email"]);
+                    }
                 } else {
-                    $email = trim($_POST["email"]);
-                }
-            } else {
-                echo "Oops! Noget gik galt. Prøv igen senere.";
-            }
-
-            // Luk statement
-            $stmt->close();
-        }
-    }
-
-    // Valider password
-    if (empty(trim($_POST["password"])) && empty($signup_err)) {
-        $signup_err = "Indtast venligst en adgangskode.";
-    } elseif (strlen(trim($_POST["password"])) < 6 && empty($signup_err)) {
-        $signup_err = "Adgangskoden skal være mindst 6 tegn.";
-    } else {
-        $password = trim($_POST["password"]);
-    }
-
-    // Valider password bekræftelse
-    if (empty(trim($_POST["password-confirm"])) && empty($signup_err)) {
-        $signup_err = "Bekræft venligst adgangskoden.";
-    } else {
-        $confirm_password = trim($_POST["password-confirm"]);
-        if (empty($signup_err) && ($password != $confirm_password)) {
-            $signup_err = "Adgangskoderne matcher ikke.";
-        }
-    }
-
-    // Valider accept af vilkår
-    if (!isset($_POST["terms"]) && empty($signup_err)) {
-        $signup_err = "Du skal acceptere vilkår og betingelser.";
-    }
-
-    // Tjek for fejl inden vi indsætter i databasen
-    if (empty($signup_err)) {
-
-        // Forbered INSERT statement
-        $sql = "INSERT INTO users (firstname, lastname, email, password) VALUES (?, ?, ?, ?)";
-
-        if ($stmt = $conn->prepare($sql)) {
-            // Bind variabler til prepared statement
-            $stmt->bind_param("ssss", $param_firstname, $param_lastname, $param_email, $param_password);
-
-            // Set parametre
-            $param_firstname = trim($_POST["first-name"]);
-            $param_lastname = trim($_POST["last-name"]);
-            $param_email = $email;
-            // Hash password - dette er den vigtige del for sikkerhed
-            $param_password = password_hash($password, PASSWORD_DEFAULT);
-
-            // Forsøg at eksekvere prepared statement
-            if ($stmt->execute()) {
-                // Get the new user ID
-                $new_user_id = $stmt->insert_id;
-
-                // Registrering fuldført og auto-login
-                $_SESSION["loggedin"] = true;
-                $_SESSION["id"] = $new_user_id;
-                $_SESSION["email"] = $email;
-
-                // Set cookie for session persistence if remember me is checked
-                if (isset($_POST["remember-signup"])) {
-                    // Set cookies to last for 30 days
-                    setcookie("user_login", $email, time() + (86400 * 30), "/");
-                    setcookie("user_id", $new_user_id, time() + (86400 * 30), "/");
+                    echo "Oops! Noget gik galt. Prøv igen senere.";
                 }
 
-                // Redirect to dashboard
-                header("location: ../dashboard/");
-                exit;
-            } else {
-                $signup_err = "Noget gik galt. Prøv igen senere.";
+                // Close statement
+                $stmt->close();
             }
+        }
 
-            // Luk statement
-            $stmt->close();
+        // Validate password
+        if (empty(trim($_POST["password"])) && empty($signup_err)) {
+            $signup_err = "Indtast venligst en adgangskode.";
+        } elseif (strlen(trim($_POST["password"])) < 6 && empty($signup_err)) {
+            $signup_err = "Adgangskoden skal være mindst 6 tegn.";
+        } else {
+            $password = trim($_POST["password"]);
+        }
+
+        // Validate password confirmation
+        if (empty(trim($_POST["password-confirm"])) && empty($signup_err)) {
+            $signup_err = "Bekræft venligst adgangskoden.";
+        } else {
+            $confirm_password = trim($_POST["password-confirm"]);
+            if (empty($signup_err) && ($password != $confirm_password)) {
+                $signup_err = "Adgangskoderne matcher ikke.";
+            }
+        }
+
+        // Validate terms acceptance
+        if (!isset($_POST["terms"]) && empty($signup_err)) {
+            $signup_err = "Du skal acceptere vilkår og betingelser.";
+        }
+
+        // Check for errors before inserting into database
+        if (empty($signup_err)) {
+            // Prepare INSERT statement
+            $sql = "INSERT INTO users (firstname, lastname, email, password) VALUES (?, ?, ?, ?)";
+
+            if ($stmt = $conn->prepare($sql)) {
+                // Bind variables to prepared statement
+                $stmt->bind_param("ssss", $param_firstname, $param_lastname, $param_email, $param_password);
+
+                // Set parameters
+                $param_firstname = sanitize_input($_POST["first-name"]);
+                $param_lastname = sanitize_input($_POST["last-name"]);
+                $param_email = $email;
+                // Hash password - this is the important part for security
+                $param_password = password_hash($password, PASSWORD_DEFAULT);
+
+                // Execute prepared statement
+                if ($stmt->execute()) {
+                    // Get the new user ID
+                    $new_user_id = $stmt->insert_id;
+
+                    // Generate a new session ID
+                    session_regenerate_id(true);
+                    $session_id = session_id();
+
+                    // Registration completed and auto-login
+                    $_SESSION["loggedin"] = true;
+                    $_SESSION["id"] = $new_user_id;
+                    $_SESSION["email"] = $email;
+
+                    // Get client information
+                    $ip_address = $_SERVER['REMOTE_ADDR'];
+                    $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : 'Unknown';
+
+                    // Set expiration time (30 days from now if remember me is checked, otherwise 2 hours)
+                    $expiry_duration = isset($_POST["remember-signup"]) ? (86400 * 30) : (7200);
+                    $expires_at = date('Y-m-d H:i:s', time() + $expiry_duration);
+
+                    // Store session in database
+                    $session_sql = "INSERT INTO user_sessions (user_id, session_id, expires_at, ip_address, user_agent) 
+                                   VALUES (?, ?, ?, ?, ?)";
+
+                    if ($session_stmt = $conn->prepare($session_sql)) {
+                        $session_stmt->bind_param("issss", $new_user_id, $session_id, $expires_at, $ip_address, $user_agent);
+                        $session_stmt->execute();
+                        $session_stmt->close();
+                    }
+
+                    // Set cookie for session persistence if remember me is checked
+                    if (isset($_POST["remember-signup"])) {
+                        // Set cookies to last for 30 days
+                        setcookie("user_login", $email, time() + $expiry_duration, "/", "", isset($_SERVER['HTTPS']), true);
+                        setcookie("user_id", $new_user_id, time() + $expiry_duration, "/", "", isset($_SERVER['HTTPS']), true);
+                        setcookie("session_id", $session_id, time() + $expiry_duration, "/", "", isset($_SERVER['HTTPS']), true);
+                    }
+
+                    // Log the registration
+                    log_auth_event($new_user_id, "Registration", "New user registered");
+
+                    // Rotate CSRF token for security
+                    rotate_csrf_token();
+
+                    // Redirect to dashboard
+                    header("location: ../dashboard/");
+                    exit;
+                } else {
+                    $signup_err = "Noget gik galt. Prøv igen senere.";
+
+                    // Log the error
+                    log_auth_event(0, "System Error", "Registration query execution failed");
+                }
+
+                // Close statement
+                $stmt->close();
+            }
         }
     }
 }
-
 
 include("../components/header.php");
 ?>
@@ -305,6 +389,9 @@ include("../components/header.php");
             <!-- Login Form -->
             <div id="login-form" class="space-y-6">
                 <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="POST">
+                    <!-- CSRF Token -->
+                    <input type="hidden" name="csrf_token" value="<?php echo generate_csrf_token(); ?>">
+
                     <div class="space-y-4">
                         <div>
                             <label for="email-login" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -369,6 +456,9 @@ include("../components/header.php");
             <!-- Signup Form (initially hidden) -->
             <div id="signup-form" class="space-y-6 hidden">
                 <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="POST">
+                    <!-- CSRF Token -->
+                    <input type="hidden" name="csrf_token" value="<?php echo generate_csrf_token(); ?>">
+
                     <div class="space-y-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>

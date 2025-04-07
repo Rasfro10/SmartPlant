@@ -25,7 +25,7 @@ HttpClient client = HttpClient(wifi, serverAddress, serverPort);
 
 // Timing variables
 unsigned long previousMillis = 0;
-const long interval = 3000;
+const long interval = 10000;
 
 void setup() {
   Serial.begin(9600);
@@ -237,12 +237,7 @@ void displayMessage(String title, String message) {
 }
 
 void changePlantId() {
-  // Increment plant ID (cycle through 1-10)
-  plantId = (plantId % 10) + 1;
-
-  // Display the new plant ID
-  displayMessage("Plant ID", "Changed to: " + String(plantId));
-  delay(2000);
+  plantId = 1;
 
   // Update the display with current readings
   float soilMoisture = readSoilMoisture();
