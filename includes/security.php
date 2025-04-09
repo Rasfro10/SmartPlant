@@ -1,136 +1,110 @@
 <?php
 
 /**
- * Security functions for SmartPlant
- * Includes CSRF protection and other security utilities
+ * Security functions for SmartPlant application
  */
 
-// Generate a CSRF token
+// Generate CSRF token
 function generate_csrf_token()
 {
-    if (!isset($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    if (!isset($_SESSION["csrf_token"])) {
+        $_SESSION["csrf_token"] = bin2hex(random_bytes(32));
     }
-    return $_SESSION['csrf_token'];
+    return $_SESSION["csrf_token"];
 }
 
 // Verify CSRF token
 function verify_csrf_token($token)
 {
-    if (!isset($_SESSION['csrf_token']) || $token !== $_SESSION['csrf_token']) {
-        // Token invalid - handle error
+    if (!isset($_SESSION["csrf_token"]) || $token !== $_SESSION["csrf_token"]) {
         return false;
     }
     return true;
 }
 
-// Rotate CSRF token (use after form submission)
+// Rotate CSRF token for added security
 function rotate_csrf_token()
 {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-    return $_SESSION['csrf_token'];
+    $_SESSION["csrf_token"] = bin2hex(random_bytes(32));
+    return $_SESSION["csrf_token"];
 }
 
-// Sanitize input
+// Sanitize user input
 function sanitize_input($data)
 {
     $data = trim($data);
     $data = stripslashes($data);
-    $data = htmlspecialchars($data);
+    $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
     return $data;
 }
 
-// Parse user agent to get useful information
-function parse_user_agent($user_agent)
+/**
+ * Get the real client IP address
+ * This function checks various server variables to determine the actual client IP
+ * It handles cases when the client is behind a proxy, load balancer, etc.
+ * 
+ * @return string The client's IP address
+ */
+function get_client_ip()
 {
-    $browser = "Unknown";
-    $os = "Unknown";
-    $device = "Unknown";
-
-    // Browser detection
-    if (strpos($user_agent, 'Chrome') && !strpos($user_agent, 'Chromium') && !strpos($user_agent, 'Edge') && !strpos($user_agent, 'OPR') && !strpos($user_agent, 'Edg')) {
-        $browser = 'Chrome';
-    } elseif (strpos($user_agent, 'Firefox')) {
-        $browser = 'Firefox';
-    } elseif (strpos($user_agent, 'Safari') && !strpos($user_agent, 'Chrome')) {
-        $browser = 'Safari';
-    } elseif (strpos($user_agent, 'Edge') || strpos($user_agent, 'Edg')) {
-        $browser = 'Edge';
-    } elseif (strpos($user_agent, 'OPR') || strpos($user_agent, 'Opera')) {
-        $browser = 'Opera';
-    } elseif (strpos($user_agent, 'MSIE') || strpos($user_agent, 'Trident/7')) {
-        $browser = 'Internet Explorer';
+    // Check for shared internet/ISP IP
+    if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+        return $_SERVER['HTTP_CLIENT_IP'];
     }
 
-    // OS detection
-    if (strpos($user_agent, 'Windows')) {
-        $os = 'Windows';
-    } elseif (strpos($user_agent, 'Mac OS X')) {
-        $os = 'Mac OS X';
-    } elseif (strpos($user_agent, 'Linux')) {
-        $os = 'Linux';
-    } elseif (strpos($user_agent, 'Android')) {
-        $os = 'Android';
-    } elseif (strpos($user_agent, 'iOS')) {
-        $os = 'iOS';
+    // Check for IPs passing through proxies
+    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        // HTTP_X_FORWARDED_FOR can include multiple IPs, get the first one
+        $ip_array = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+        return trim($ip_array[0]);
     }
 
-    // Device detection
-    if (strpos($user_agent, 'Mobile')) {
-        $device = 'Mobile';
-    } elseif (strpos($user_agent, 'Tablet')) {
-        $device = 'Tablet';
-    } else {
-        $device = 'Desktop';
+    // Check for CloudFlare or other CDN IPs
+    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+        return $_SERVER['HTTP_CF_CONNECTING_IP'];
     }
 
-    return [
-        'browser' => $browser,
-        'os' => $os,
-        'device' => $device,
-        'full' => $user_agent
-    ];
+    // If neither of the above, use REMOTE_ADDR
+    if (!empty($_SERVER['REMOTE_ADDR'])) {
+        return $_SERVER['REMOTE_ADDR'];
+    }
+
+    // Fallback
+    return 'Unknown';
 }
 
-// Log authentication events
-function log_auth_event($user_id, $event_type, $details = '')
+// Log authentication related events
+function log_auth_event($user_id, $event_type, $description)
 {
     global $conn;
 
-    // Get IP address and user agent
-    $ip_address = $_SERVER['REMOTE_ADDR'];
-    $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : 'Unknown';
+    // If the auth_log table doesn't exist yet, create it
+    $conn->query("CREATE TABLE IF NOT EXISTS auth_log (
+        id INT AUTO_INCREMENT PRIMARY KEY, 
+        user_id INT NOT NULL,
+        event_type VARCHAR(50) NOT NULL,
+        description TEXT,
+        ip_address VARCHAR(45),
+        user_agent TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
 
-    // Parse user agent for more readable info
-    $ua_info = parse_user_agent($user_agent);
+    // Prepare SQL statement
+    $sql = "INSERT INTO auth_log (user_id, event_type, description, ip_address, user_agent) 
+            VALUES (?, ?, ?, ?, ?)";
 
-    // Handle local IP addresses
-    if ($ip_address == '::1' || $ip_address == '127.0.0.1') {
-        $ip_display = 'localhost';
-    } else {
-        $ip_display = $ip_address;
-    }
+    if ($stmt = $conn->prepare($sql)) {
+        // Get client info
+        $ip_address = get_client_ip();
+        $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : 'Unknown';
 
-    // Log to file
-    $log_dir = $_SERVER['DOCUMENT_ROOT'] . '/smartplant/logs/';
-    $log_file = $log_dir . 'auth_' . date('Y-m-d') . '.log';
+        // Bind parameters
+        $stmt->bind_param("issss", $user_id, $event_type, $description, $ip_address, $user_agent);
 
-    $log_message = date('Y-m-d H:i:s') .
-        " | User ID: $user_id" .
-        " | $event_type" .
-        " | IP: $ip_display" .
-        " | Browser: {$ua_info['browser']}" .
-        " | OS: {$ua_info['os']}" .
-        " | Device: {$ua_info['device']}" .
-        " | $details\n";
+        // Execute the statement
+        $stmt->execute();
 
-    // Create logs directory if it doesn't exist
-    if (!is_dir($log_dir)) {
-        mkdir($log_dir, 0755, true);
-    }
-
-    // Write to log file if directory exists and is writable
-    if (is_dir($log_dir) && is_writable($log_dir)) {
-        file_put_contents($log_file, $log_message, FILE_APPEND);
+        // Close statement
+        $stmt->close();
     }
 }

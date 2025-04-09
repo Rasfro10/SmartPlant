@@ -74,7 +74,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
                                 $_SESSION["email"] = $email;
 
                                 // Get client information
-                                $ip_address = $_SERVER['REMOTE_ADDR'];
+                                $ip_address = get_client_ip();
                                 $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : 'Unknown';
 
                                 // Set expiration time (30 days from now if remember me is checked, otherwise 2 hours)
@@ -241,7 +241,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['signup'])) {
                     $_SESSION["email"] = $email;
 
                     // Get client information
-                    $ip_address = $_SERVER['REMOTE_ADDR'];
+                    $ip_address = get_client_ip();
                     $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : 'Unknown';
 
                     // Set expiration time (30 days from now if remember me is checked, otherwise 2 hours)
