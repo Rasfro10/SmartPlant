@@ -75,7 +75,48 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             throw new Exception("Error inserting plant: " . $stmt->error);
         }
 
+        // Get the ID of the newly inserted plant
+        $plant_id = $conn->insert_id;
+
         $stmt->close();
+
+        // Check if a sensor pin was selected
+        if (isset($_POST['sensor-pin']) && !empty($_POST['sensor-pin'])) {
+            $sensor_pin = $_POST['sensor-pin'];
+
+            // Check if this sensor is already assigned to another plant
+            $check_sql = "SELECT plant_id FROM plant_sensors WHERE sensor_pin = ?";
+            $check_stmt = $conn->prepare($check_sql);
+            $check_stmt->bind_param("s", $sensor_pin);
+            $check_stmt->execute();
+            $check_result = $check_stmt->get_result();
+
+            if ($check_result->num_rows > 0) {
+                // Update existing sensor assignment
+                $update_sql = "UPDATE plant_sensors SET plant_id = ? WHERE sensor_pin = ?";
+                $update_stmt = $conn->prepare($update_sql);
+                $update_stmt->bind_param("is", $plant_id, $sensor_pin);
+
+                if (!$update_stmt->execute()) {
+                    $message .= " Men der opstod en fejl ved opdatering af sensor tilknytning.";
+                }
+
+                $update_stmt->close();
+            } else {
+                // Insert new sensor assignment
+                $insert_sql = "INSERT INTO plant_sensors (plant_id, sensor_pin) VALUES (?, ?)";
+                $insert_stmt = $conn->prepare($insert_sql);
+                $insert_stmt->bind_param("is", $plant_id, $sensor_pin);
+
+                if (!$insert_stmt->execute()) {
+                    $message .= " Men der opstod en fejl ved tilknytning af sensoren.";
+                }
+
+                $insert_stmt->close();
+            }
+
+            $check_stmt->close();
+        }
 
         $success = true;
         $message = "Din plante \"$name\" er nu tilføjet til din samling.";
@@ -99,6 +140,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </script>";
     } catch (Exception $e) {
         $message = "Der opstod en fejl: " . $e->getMessage();
+    }
+}
+
+// Get list of already assigned sensors
+$assigned_sensors = [];
+$sensors_sql = "SELECT sensor_pin, p.name as plant_name FROM plant_sensors ps JOIN plants p ON ps.plant_id = p.id";
+$sensors_result = $conn->query($sensors_sql);
+
+if ($sensors_result && $sensors_result->num_rows > 0) {
+    while ($row = $sensors_result->fetch_assoc()) {
+        $assigned_sensors[$row['sensor_pin']] = $row['plant_name'];
     }
 }
 ?>
@@ -287,6 +339,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 </div>
                             </div>
                         </div>
+                        <!-- Sensor Assignment -->
+                        <div class="bg-white rounded-lg shadow-sm p-5 mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Sensor tilkobling</h3>
+
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="sensor-pin" class="block text-sm font-medium text-gray-700 mb-1">Tildel fugtighedssensor</label>
+                                    <select id="sensor-pin" name="sensor-pin" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                        <option value="">Ingen sensor</option>
+                                        <?php
+                                        // Only show A5 and A6 as options
+                                        $available_pins = ['A5', 'A6'];
+                                        foreach ($available_pins as $pin):
+                                            $pin_assigned = isset($assigned_sensors[$pin]);
+                                        ?>
+                                            <option value="<?php echo $pin; ?>" <?php echo $pin_assigned ? 'data-assigned="' . htmlspecialchars($assigned_sensors[$pin]) . '"' : ''; ?>>
+                                                <?php echo $pin; ?>
+                                                <?php if ($pin_assigned): ?>
+                                                    (Bruges af: <?php echo htmlspecialchars($assigned_sensors[$pin]); ?>)
+                                                <?php endif; ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <p class="text-sm text-gray-500 mt-1">Vælg hvilken pin din fugtighedssensor er tilsluttet på Arduino (A5 eller A6).</p>
+                                    <p id="sensor-warning" class="text-sm text-orange-500 mt-1 hidden">Denne sensor er allerede tilknyttet en anden plante. Hvis du fortsætter, vil sensoren blive flyttet til denne plante.</p>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- Notifications -->
                         <div class="bg-white rounded-lg shadow-sm p-5 mb-6">
@@ -388,6 +468,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     };
 
                     reader.readAsDataURL(fileInput.files[0]);
+                }
+            });
+
+            // Sensor assignment warning
+            const sensorPin = document.getElementById('sensor-pin');
+            const sensorWarning = document.getElementById('sensor-warning');
+
+            sensorPin.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                if (selectedOption.hasAttribute('data-assigned')) {
+                    sensorWarning.classList.remove('hidden');
+                } else {
+                    sensorWarning.classList.add('hidden');
                 }
             });
         });

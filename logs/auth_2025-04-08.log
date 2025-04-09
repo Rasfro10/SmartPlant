@@ -1,0 +1,14 @@
+2025-04-08 10:06:10 | User ID: 1 | Session Expired | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | Session ID: eg0t3i6bdgq1dfqu0t83pggbb1
+2025-04-08 10:06:19 | User ID: 1 | Login | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | Successful login
+2025-04-08 10:07:06 | User ID: 1 | Logout | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | User initiated logout
+2025-04-08 10:07:27 | User ID: 1 | Registration | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | New user registered
+2025-04-08 10:58:57 | User ID: 1 | Logout | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | User initiated logout
+2025-04-08 10:59:21 | User ID: 1 | Registration | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | New user registered
+2025-04-08 11:37:42 | User ID: 1 | Logout | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | User initiated logout
+2025-04-08 11:38:25 | User ID: 1 | Registration | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | New user registered
+2025-04-08 13:07:35 | User ID: 1 | Logout | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | User initiated logout
+2025-04-08 13:08:27 | User ID: 1 | Registration | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | New user registered
+2025-04-08 13:09:01 | User ID: 1 | Logout | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | User initiated logout
+2025-04-08 13:09:10 | User ID: 1 | Login | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | Successful login
+2025-04-08 15:05:04 | User ID: 1 | Logout | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | User initiated logout
+2025-04-08 15:05:19 | User ID: 1 | Registration | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | New user registered

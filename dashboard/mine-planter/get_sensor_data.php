@@ -68,6 +68,82 @@ if ($stmt = $conn->prepare($sql)) {
     $stmt->close();
 }
 
+// Function to convert raw sensor value to moisture percentage
+function convertMoistureToPercentage($rawValue)
+{
+    // These values are based on your observed sensor readings
+    // Dry soil (needs water): 730-800
+    // Wet soil: 370-430
+    $drySoilMin = 730;
+    $drySoilMax = 800;
+    $wetSoilMin = 370;
+    $wetSoilMax = 430;
+
+    // Ensure the raw value is within the expected range
+    $rawValue = max($wetSoilMin, min($drySoilMax, $rawValue));
+
+    // Linear interpolation to convert sensor value to percentage
+    if ($rawValue >= $drySoilMin) {
+        // Dry soil (0-30%)
+        $percentage = map($rawValue, $drySoilMin, $drySoilMax, 0, 30);
+    } else {
+        // Wet soil (70-100%)
+        $percentage = map($rawValue, $wetSoilMin, $drySoilMax, 70, 100);
+    }
+
+    return round($percentage, 1);
+}
+
+// Function to convert light level to a more meaningful representation
+function convertLightToLevel($rawValue) {
+    // Adjust the ranges to match your 700-1000 sensor readings
+    if ($rawValue < 750) {
+        return [
+            'level' => 'Lav',
+            'percentage' => 30,
+            'description' => 'Svagt lys'
+        ];
+    }
+    elseif ($rawValue < 850) {
+        return [
+            'level' => 'Moderat',
+            'percentage' => 50,
+            'description' => 'Normalt indendørslys'
+        ];
+    }
+    elseif ($rawValue < 950) {
+        return [
+            'level' => 'Høj',
+            'percentage' => 70,
+            'description' => 'Kraftigt lys'
+        ];
+    }
+    else {
+        return [
+            'level' => 'Meget høj',
+            'percentage' => 90,
+            'description' => 'Meget kraftigt lys'
+        ];
+    }
+}
+
+// Helper function to map a value from one range to another
+function map($value, $inMin, $inMax, $outMin, $outMax)
+{
+    return ($value - $inMin) * ($outMax - $outMin) / ($inMax - $inMin) + $outMin;
+}
+
+// Process sensor data if available
+if ($sensor_data) {
+    // Convert moisture reading
+    $sensor_data['soil_moisture'] = convertMoistureToPercentage($sensor_data['soil_moisture']);
+
+    // Convert light level
+    $lightData = convertLightToLevel($sensor_data['light_level']);
+    $sensor_data['light_level'] = $lightData['percentage'];
+    $sensor_data['light_description'] = $lightData['description'];
+}
+
 // Determine plant status
 function getPlantStatus($sensorData, $plant)
 {
@@ -94,7 +170,7 @@ function getPlantStatus($sensorData, $plant)
     $lightNeeds = $plant['light_needs'];
 
     // If light level is low and plant needs medium or high light
-    if ($lightLevel < 30 && ($lightNeeds == 'Medium' || $lightNeeds == 'Højt')) {
+    if ($lightLevel < 50 && ($lightNeeds == 'Medium' || $lightNeeds == 'Højt')) {
         return [
             'status' => 'needs_light',
             'label' => 'Behøver lys',

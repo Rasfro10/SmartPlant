@@ -48,15 +48,26 @@ CREATE TABLE IF NOT EXISTS plants (
 CREATE TABLE IF NOT EXISTS plant_data (
     id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     plant_id INT NOT NULL,
-    soil_moisture FLOAT,
+    soil_moisture INT,
     light_level FLOAT,
     temperature FLOAT,
     humidity FLOAT,
-    battery_level FLOAT,
+    pressure FLOAT,
     watered_at DATETIME,
-    fertilized_at DATETIME,
     reading_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    timestamp BIGINT,
     FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS plant_sensors (
+    id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    plant_id INT NOT NULL,
+    sensor_pin VARCHAR(10) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_plant (plant_id),
+    UNIQUE KEY unique_sensor (sensor_pin)
 );
 
 CREATE TABLE IF NOT EXISTS notifications (

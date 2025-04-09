@@ -1,5 +1,7 @@
 <?php
 require_once $_SERVER['DOCUMENT_ROOT'] . '/smartplant/backend/auth/session_handler.php';
+require_once '../notifications/check_notifications.php';
+
 // Set current page for sidebar highlighting
 $page = "myPlants";
 
@@ -813,8 +815,7 @@ include('../../components/header.php');
                     document.body.style.overflow = '';
                 }
             });
-
-            // Auto-refresh sensor data every 10 seconds
+            // Function to refresh sensor data
             function refreshSensorData() {
                 const plantItems = document.querySelectorAll('.plant-item');
 
@@ -857,8 +858,11 @@ include('../../components/header.php');
                 });
             }
 
-            // Start refreshing data every 10 seconds
-            setInterval(refreshSensorData, 10000);
+            // Call refreshSensorData immediately when page loads
+            refreshSensorData();
+
+            // Then start refreshing data every 3 seconds
+            setInterval(refreshSensorData, 3000);
         });
     </script>
 </body>

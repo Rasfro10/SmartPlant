@@ -1,11 +1,15 @@
 <?php
+// ini_set('display_errors', 1);
+// ini_set('display_startup_errors', 1);
+// error_reporting(E_ALL);
 require_once $_SERVER['DOCUMENT_ROOT'] . '/smartplant/backend/auth/session_handler.php';
-// Include notification functions
-require_once $_SERVER['DOCUMENT_ROOT'] . '/smartplant/components/notifications-display.php';
 
 // Set current page for sidebar highlighting
 $page = "dashboard";
 include('../components/header.php');
+
+// Include notification checker to ensure notifications are generated
+require_once __DIR__ . '/notifications/check_notifications.php';
 
 // Get user's plants from database
 $user_id = $_SESSION['id'];
@@ -28,6 +32,37 @@ if ($stmt = $conn->prepare($sql)) {
     $stmt->close();
 }
 
+// Helper function to convert raw moisture value to percentage
+if (!function_exists('convertMoistureToPercentage')) {
+    function convertMoistureToPercentage($rawValue)
+    {
+        $drySoilMin = 730;
+        $drySoilMax = 800;
+        $wetSoilMin = 370;
+        $wetSoilMax = 430;
+
+        // Ensure the raw value is within the expected range
+        $rawValue = max($wetSoilMin, min($drySoilMax, $rawValue));
+
+        // Linear interpolation to convert sensor value to percentage
+        if ($rawValue >= $drySoilMin) {
+            // Dry soil (0-30%)
+            $percentage = map($rawValue, $drySoilMin, $drySoilMax, 0, 30);
+        } else {
+            // Wet soil (70-100%)
+            $percentage = map($rawValue, $wetSoilMin, $drySoilMax, 70, 100);
+        }
+
+        return round($percentage, 1);
+    }
+}
+if (!function_exists('map')) {
+    function map($value, $inMin, $inMax, $outMin, $outMax)
+    {
+        return ($value - $inMin) * ($outMax - $outMin) / ($inMax - $inMin) + $outMin;
+    }
+}
+
 // Get latest sensor data and notifications
 $plants_with_data = [];
 $plant_status_notifications = [];
@@ -44,6 +79,12 @@ foreach ($plants as $plant) {
             $result = $stmt->get_result();
             if ($row = $result->fetch_assoc()) {
                 $sensor_data = $row;
+
+                // Convert raw moisture to percentage
+                if (isset($sensor_data['soil_moisture'])) {
+                    $rawMoisture = $sensor_data['soil_moisture'];
+                    $sensor_data['soil_moisture'] = convertMoistureToPercentage($rawMoisture);
+                }
             }
         }
         $stmt->close();
@@ -121,13 +162,39 @@ foreach ($plants as $plant) {
     ];
 }
 
+// Get database notifications
+$db_notifications = [];
+$notification_sql = "SELECT n.*, p.name as plant_name 
+                   FROM notifications n
+                   JOIN plants p ON n.plant_id = p.id
+                   WHERE p.user_id = ?
+                   ORDER BY n.created_at DESC
+                   LIMIT 5";
+
+if ($notification_stmt = $conn->prepare($notification_sql)) {
+    $notification_stmt->bind_param("i", $user_id);
+
+    if ($notification_stmt->execute()) {
+        $notification_result = $notification_stmt->get_result();
+        while ($row = $notification_result->fetch_assoc()) {
+            $db_notifications[] = [
+                'plant_id' => $row['plant_id'],
+                'plant_name' => $row['plant_name'],
+                'notification_type' => $row['notification_type'],
+                'message' => $row['message'],
+                'is_read' => $row['is_read'],
+                'scheduled_for' => $row['created_at']
+            ];
+        }
+    }
+
+    $notification_stmt->close();
+}
+
 // Sort plant status notifications by time (newest first)
 usort($plant_status_notifications, function ($a, $b) {
     return strtotime($b['time']) - strtotime($a['time']);
 });
-
-// Get database notifications
-$db_notifications = get_unread_notifications($conn, $user_id, 10);
 
 // Combine all notifications for display (prioritize database notifications)
 $all_notifications = array_merge($db_notifications, $plant_status_notifications);
@@ -161,6 +228,13 @@ function get_time_ago($datetime)
         return "lige nu";
     }
 }
+
+// Get the list of plants for the chart dropdown
+$chart_plants = $plants;
+
+// Set first plant as default selected
+$default_plant_id = !empty($chart_plants) ? $chart_plants[0]['id'] : '';
+$default_plant_name = !empty($chart_plants) ? $chart_plants[0]['name'] : 'Ingen plante valgt';
 ?>
 
 <head>
@@ -208,6 +282,34 @@ function get_time_ago($datetime)
 
         .dropdown-menu.show {
             display: block;
+        }
+
+        /* Custom scrollbar styling */
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            /* Firefox */
+            scrollbar-color: rgba(156, 163, 175, 0.5) rgba(229, 231, 235, 0.5);
+            /* Firefox: thumb track */
+        }
+
+        /* WebKit browsers (Chrome, Safari, newer versions of Opera) */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(229, 231, 235, 0.5);
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: rgba(156, 163, 175, 0.5);
+            border-radius: 10px;
+            border: 2px solid transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(107, 114, 128, 0.7);
         }
     </style>
 </head>
@@ -303,13 +405,9 @@ function get_time_ago($datetime)
                         <!-- Notifications -->
                         <div class="bg-white rounded-lg shadow-sm p-4">
                             <h3 class="font-bold text-gray-800 mb-4">Notifikationer</h3>
-                            <div class="space-y-3">
+                            <div class="space-y-3 overflow-y-auto max-h-64 pr-1 custom-scrollbar">
                                 <?php
-                                $count = 0;
                                 foreach ($all_notifications as $notification):
-                                    if ($count >= 3) break; // Show only 3 notifications
-                                    $count++;
-
                                     // Check if it's a database notification or a sensor-based notification
                                     if (isset($notification['plant_id'])) {
                                         // This is a database notification
@@ -367,30 +465,18 @@ function get_time_ago($datetime)
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
-
-                                <?php if (count($all_notifications) == 0): ?>
-                                    <div class="text-center py-4 text-gray-500">
-                                        <p>Ingen notifikationer at vise</p>
-                                    </div>
-                                <?php endif; ?>
                             </div>
-                            <?php if (count($all_notifications) > 3): ?>
-                                <a href="./mine-planter/notifications.php" class="mt-4 text-sm text-green-600 hover:text-green-800 font-medium flex items-center justify-end">
-                                    Se alle notifikationer <i class="fas fa-arrow-right ml-1"></i>
-                                </a>
-                            <?php endif; ?>
+                            <a href="./notifications/" class="mt-4 text-sm text-green-600 hover:text-green-800 font-medium flex items-center justify-end">
+                                Se alle notifikationer <i class="fas fa-arrow-right ml-1"></i>
+                            </a>
                         </div>
 
                         <!-- Recent Activity -->
                         <div class="lg:col-span-2 bg-white rounded-lg shadow-sm p-4">
                             <h3 class="font-bold text-gray-800 mb-4">Seneste Aktiviteter</h3>
-                            <div class="space-y-3">
+                            <div class="space-y-3 overflow-y-auto max-h-64 pr-1 custom-scrollbar">
                                 <?php
-                                $count = 0;
                                 foreach ($all_notifications as $notification):
-                                    if ($count >= 4) break; // Show only 4 activities
-                                    $count++;
-
                                     // Check if it's a database notification or a sensor-based notification
                                     if (isset($notification['plant_id'])) {
                                         // This is a database notification
@@ -443,18 +529,10 @@ function get_time_ago($datetime)
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
-
-                                <?php if (count($all_notifications) == 0): ?>
-                                    <div class="text-center py-4 text-gray-500">
-                                        <p>Ingen aktiviteter at vise</p>
-                                    </div>
-                                <?php endif; ?>
                             </div>
-                            <?php if (count($all_notifications) > 4): ?>
-                                <a href="./mine-planter/notifications.php" class="mt-4 text-sm text-green-600 hover:text-green-800 font-medium flex items-center justify-end">
-                                    Se alle aktiviteter <i class="fas fa-arrow-right ml-1"></i>
-                                </a>
-                            <?php endif; ?>
+                            <a href="./notifications/" class="mt-4 text-sm text-green-600 hover:text-green-800 font-medium flex items-center justify-end">
+                                Se alle aktiviteter <i class="fas fa-arrow-right ml-1"></i>
+                            </a>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -507,7 +585,7 @@ function get_time_ago($datetime)
                                             <div class="flex items-center text-sm text-gray-600">
                                                 <i class="fas fa-tint text-blue-500 mr-2"></i>
                                                 <?php
-                                                if ($plant_data['sensor_data']) {
+                                                if ($plant_data['sensor_data'] && isset($plant_data['sensor_data']['soil_moisture'])) {
                                                     echo number_format($plant_data['sensor_data']['soil_moisture'], 1) . '%';
                                                 } else {
                                                     echo 'N/A';
@@ -517,7 +595,7 @@ function get_time_ago($datetime)
                                             <div class="flex items-center text-sm text-gray-600">
                                                 <i class="fas fa-temperature-high text-red-500 mr-2"></i>
                                                 <?php
-                                                if ($plant_data['sensor_data']) {
+                                                if ($plant_data['sensor_data'] && isset($plant_data['sensor_data']['temperature'])) {
                                                     echo number_format($plant_data['sensor_data']['temperature'], 1) . '°C';
                                                 } else {
                                                     echo 'N/A';
@@ -526,7 +604,13 @@ function get_time_ago($datetime)
                                             </div>
                                             <div class="flex items-center text-sm text-gray-600">
                                                 <i class="fas fa-sun text-yellow-500 mr-2"></i>
-                                                <?php echo htmlspecialchars($plant_data['plant']['light_needs']); ?>
+                                                <?php
+                                                if ($plant_data['sensor_data'] && isset($plant_data['sensor_data']['light_level'])) {
+                                                    echo number_format($plant_data['sensor_data']['light_level'], 0) . ' units';
+                                                } else {
+                                                    echo htmlspecialchars($plant_data['plant']['light_needs']);
+                                                }
+                                                ?>
                                             </div>
                                             <div class="flex items-center text-sm text-gray-600">
                                                 <i class="fas fa-clock text-purple-500 mr-2"></i>
@@ -559,42 +643,47 @@ function get_time_ago($datetime)
                     <div class="mb-4">
                         <label for="plant-select" class="block text-sm font-medium text-gray-700 mb-1">Vælg plante</label>
                         <select id="plant-select" class="w-full sm:w-1/3 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                            <option value="">Vælg en plante</option>
-                            <?php foreach ($plants as $plant): ?>
-                                <option value="<?php echo $plant['id']; ?>"><?php echo htmlspecialchars($plant['name']); ?></option>
-                            <?php endforeach; ?>
+                            <?php if (empty($chart_plants)): ?>
+                                <option value="">Ingen planter tilgængelige</option>
+                            <?php else: ?>
+                                <?php foreach ($chart_plants as $plant): ?>
+                                    <option value="<?php echo $plant['id']; ?>" <?php echo ($plant['id'] == $default_plant_id) ? 'selected' : ''; ?>><?php echo htmlspecialchars($plant['name']); ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </select>
                     </div>
 
-                    <div id="charts-container" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <h4 class="font-medium text-gray-800 mb-2 text-center">Jordfugtighed (%)</h4>
-                            <div class="h-60">
-                                <canvas id="moisture-chart"></canvas>
+                    <?php if (!empty($chart_plants)): ?>
+                        <div id="charts-container" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h4 class="font-medium text-gray-800 mb-2 text-center">Jordfugtighed (%)</h4>
+                                <div class="h-60">
+                                    <canvas id="moisture-chart"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h4 class="font-medium text-gray-800 mb-2 text-center">Temperatur (°C)</h4>
+                                <div class="h-60">
+                                    <canvas id="temperature-chart"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h4 class="font-medium text-gray-800 mb-2 text-center">Lysniveau</h4>
+                                <div class="h-60">
+                                    <canvas id="light-chart"></canvas>
+                                </div>
                             </div>
                         </div>
-
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <h4 class="font-medium text-gray-800 mb-2 text-center">Temperatur (°C)</h4>
-                            <div class="h-60">
-                                <canvas id="temperature-chart"></canvas>
-                            </div>
+                    <?php else: ?>
+                        <div id="no-plant-message" class="h-60 bg-gray-50 rounded-lg flex items-center justify-center">
+                            <p class="text-gray-500 text-center">
+                                <i class="fas fa-seedling text-4xl mb-2 block"></i>
+                                Ingen planter at vise statistik for. Tilføj en plante først.
+                            </p>
                         </div>
-
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <h4 class="font-medium text-gray-800 mb-2 text-center">Lysniveau</h4>
-                            <div class="h-60">
-                                <canvas id="light-chart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="no-plant-message" class="hidden h-60 bg-gray-50 rounded-lg flex items-center justify-center">
-                        <p class="text-gray-500 text-center">
-                            <i class="fas fa-chart-line text-4xl mb-2 block"></i>
-                            Vælg en plante for at se statistik
-                        </p>
-                    </div>
+                    <?php endif; ?>
                 </div>
             </main>
         </div>
@@ -720,9 +809,9 @@ function get_time_ago($datetime)
             let temperatureChart = null;
             let lightChart = null;
 
-            const moistureCtx = document.getElementById('moisture-chart').getContext('2d');
-            const temperatureCtx = document.getElementById('temperature-chart').getContext('2d');
-            const lightCtx = document.getElementById('light-chart').getContext('2d');
+            const moistureCtx = document.getElementById('moisture-chart')?.getContext('2d');
+            const temperatureCtx = document.getElementById('temperature-chart')?.getContext('2d');
+            const lightCtx = document.getElementById('light-chart')?.getContext('2d');
 
             // Generate random data for demonstration
             function generateRandomData(count, min, max) {
@@ -748,6 +837,8 @@ function get_time_ago($datetime)
 
             // Create all charts based on selected plant
             function createCharts() {
+                if (!moistureCtx || !temperatureCtx || !lightCtx) return;
+
                 // Destroy existing charts if they exist
                 if (moistureChart) moistureChart.destroy();
                 if (temperatureChart) temperatureChart.destroy();
@@ -854,25 +945,92 @@ function get_time_ago($datetime)
 
             // Handle plant selection change
             const plantSelect = document.getElementById('plant-select');
-            const chartsContainer = document.getElementById('charts-container');
-            const noPlantMessage = document.getElementById('no-plant-message');
 
-            plantSelect.addEventListener('change', function() {
-                if (this.value) {
-                    chartsContainer.classList.remove('hidden');
-                    noPlantMessage.classList.add('hidden');
+            if (plantSelect) {
+                // Create charts if we have plants
+                if (plantSelect.value) {
+                    // Auto-create charts with the first selected plant
                     createCharts();
-                } else {
-                    chartsContainer.classList.add('hidden');
-                    noPlantMessage.classList.remove('hidden');
-                }
-            });
 
-            // Initialize with no plant selected
-            if (plantSelect && !plantSelect.value) {
-                chartsContainer.classList.add('hidden');
-                noPlantMessage.classList.remove('hidden');
+                    // Listen for changes
+                    plantSelect.addEventListener('change', function() {
+                        createCharts();
+                    });
+                }
             }
+
+            // Function to refresh sensor data for all plants
+            function refreshSensorData() {
+                const plantCards = document.querySelectorAll('.plant-card');
+
+                plantCards.forEach(card => {
+                    const plantId = card.querySelector('.plant-image').getAttribute('data-plant-id');
+                    if (!plantId) return;
+
+                    // Fetch latest sensor data for this plant
+                    fetch(`./mine-planter/get_sensor_data.php?plant_id=${plantId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success && data.sensor_data) {
+                                // Update soil moisture - make sure to use the converted percentage value
+                                const moistureElement = card.querySelector('.fa-tint').parentNode;
+                                if (moistureElement && data.sensor_data.soil_moisture) {
+                                    moistureElement.innerHTML = `<i class="fas fa-tint text-blue-500 mr-2"></i>${parseFloat(data.sensor_data.soil_moisture).toFixed(1)}%`;
+                                }
+
+                                // Update temperature
+                                const tempElement = card.querySelector('.fa-temperature-high').parentNode;
+                                if (tempElement && data.sensor_data.temperature) {
+                                    tempElement.innerHTML = `<i class="fas fa-temperature-high text-red-500 mr-2"></i>${parseFloat(data.sensor_data.temperature).toFixed(1)}°C`;
+                                }
+
+                                // Update light level
+                                const lightElement = card.querySelector('.fa-sun').parentNode;
+                                if (lightElement && data.sensor_data.light_level) {
+                                    lightElement.innerHTML = `<i class="fas fa-sun text-yellow-500 mr-2"></i>${Math.round(data.sensor_data.light_level)} units`;
+                                }
+
+                                // Update status badge
+                                if (data.status) {
+                                    const statusBadge = card.querySelector('.plant-image').parentNode.querySelector('span');
+                                    if (statusBadge) {
+                                        statusBadge.className = `absolute top-2 right-2 ${data.status.class} text-white text-xs px-2 py-1 rounded-full`;
+                                        statusBadge.textContent = data.status.label;
+                                    }
+                                }
+                            }
+                        })
+                        .catch(error => console.error('Error fetching sensor data:', error));
+                });
+
+                // Also update the status cards at the top
+                updateStatusCounts();
+            }
+
+            // Function to update the status count cards (water, light, healthy)
+            function updateStatusCounts() {
+                fetch('./get_plant_status_counts.php')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update the counts in the status cards
+                            const needsWaterElement = document.querySelector('.border-blue-500 .text-2xl');
+                            const needsLightElement = document.querySelector('.border-yellow-500 .text-2xl');
+                            const healthyElement = document.querySelector('.border-green-500 .text-2xl');
+
+                            if (needsWaterElement) needsWaterElement.textContent = data.needs_water;
+                            if (needsLightElement) needsLightElement.textContent = data.needs_light;
+                            if (healthyElement) healthyElement.textContent = data.healthy;
+                        }
+                    })
+                    .catch(error => console.error('Error updating status counts:', error));
+            }
+
+            // Call refreshSensorData immediately when page loads
+            refreshSensorData();
+
+            // Then start refreshing data every 3 seconds
+            setInterval(refreshSensorData, 3000);
         });
     </script>
 </body>

@@ -15,15 +15,6 @@ if (!isset($conn)) {
     require_once __DIR__ . '/../db/db_conn.php';
 }
 
-// Include notification functions
-require_once __DIR__ . '/../components/notifications-display.php';
-
-// Get notification count for sidebar indicator
-$notification_count = 0;
-if (isset($_SESSION['id'])) {
-    $notification_count = get_notification_count($conn, $_SESSION['id']);
-}
-
 // Initialize variables
 $firstname = $lastname = $email = $initials = "";
 
@@ -57,6 +48,40 @@ if (isset($_SESSION["id"])) {
         // Close statement
         $stmt->close();
     }
+}
+
+// Check for plants that need water and generate notifications
+// Only check every 30 minutes to avoid constant checking
+$check_interval = 30 * 60; // 30 minutes in seconds
+$last_check = isset($_SESSION['last_notification_check']) ? $_SESSION['last_notification_check'] : 0;
+$current_time = time();
+
+if (($current_time - $last_check) > $check_interval) {
+    // Update the last check time
+    $_SESSION['last_notification_check'] = $current_time;
+    
+    // Include and run the notification generator
+    require_once __DIR__ . '/../dashboard/notifications/generate_water_notifications.php';
+    generateWaterNotifications();
+}
+
+// Get the unread notification count
+$unread_notification_count = 0;
+$notification_sql = "SELECT COUNT(*) as count FROM notifications n 
+                    JOIN plants p ON n.plant_id = p.id 
+                    WHERE p.user_id = ? AND n.is_read = 'no'";
+                    
+if ($notification_stmt = $conn->prepare($notification_sql)) {
+    $notification_stmt->bind_param("i", $_SESSION["id"]);
+    
+    if ($notification_stmt->execute()) {
+        $notification_result = $notification_stmt->get_result();
+        if ($row = $notification_result->fetch_assoc()) {
+            $unread_notification_count = $row['count'];
+        }
+    }
+    
+    $notification_stmt->close();
 }
 
 // If $page is not set, default to empty string
@@ -97,17 +122,17 @@ if (!isset($page)) {
                         <span>Mine Planter</span>
                     </a>
                 </li>
-                <!-- New Notifications Link -->
+                <!-- Notifications Link with Count Badge -->
                 <li>
-                    <a href="<?= $base ?>dashboard/mine-planter/notifications.php" class="flex items-center justify-between p-3 rounded-lg <?php echo $page === 'notifications' ? 'bg-green-700 font-medium' : 'hover:bg-green-700 transition-colors'; ?>">
+                    <a href="<?= $base ?>dashboard/notifications/" class="flex items-center justify-between p-3 rounded-lg <?php echo $page === 'notifications' ? 'bg-green-700 font-medium' : 'hover:bg-green-700 transition-colors'; ?>">
                         <div class="flex items-center space-x-3">
                             <i class="fas fa-bell"></i>
                             <span>Notifikationer</span>
                         </div>
-                        <?php if ($notification_count > 0): ?>
-                            <span class="flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5">
-                                <?php echo ($notification_count > 9) ? '9+' : $notification_count; ?>
-                            </span>
+                        <?php if ($unread_notification_count > 0): ?>
+                        <div class="bg-red-500 text-white text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1 notification-badge">
+                            <?php echo $unread_notification_count; ?>
+                        </div>
                         <?php endif; ?>
                     </a>
                 </li>
@@ -135,12 +160,6 @@ if (!isset($page)) {
                     </a>
                 </li>
                 <li>
-                    <a href="<?= $base ?>notifications/test-notifications.php" class="flex items-center space-x-3 p-3 rounded-lg <?php echo $page === 'testNotifications' ? 'bg-green-700 font-medium' : 'hover:bg-green-700 transition-colors'; ?>">
-                        <i class="fas fa-vial"></i>
-                        <span>Test Notifikationer</span>
-                    </a>
-                </li>
-                <li>
                     <a href="<?= $base ?>backend/auth/logout.php" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-green-700 transition-colors">
                         <i class="fas fa-sign-out-alt"></i>
                         <span>Log ud</span>
@@ -150,3 +169,75 @@ if (!isset($page)) {
         </div>
     </div>
 </aside>
+
+<style>
+    /* Animation for notification badge */
+    @keyframes pulse {
+        0% {
+            transform: scale(0.95);
+        }
+        50% {
+            transform: scale(1.05);
+        }
+        100% {
+            transform: scale(0.95);
+        }
+    }
+    
+    .notification-badge {
+        animation: pulse 2s infinite;
+    }
+
+    /* Minimum width for badge */
+    .min-w-5 {
+        min-width: 1.25rem;
+    }
+</style>
+
+<!-- JavaScript for real-time notification updates -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Function to fetch notification count
+        function fetchNotificationCount() {
+            fetch('<?= $base ?>dashboard/notifications/get_notification_count.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateNotificationBadge(data.count);
+                    }
+                })
+                .catch(error => console.error('Error fetching notifications:', error));
+        }
+        
+        // Function to update the notification badge
+        function updateNotificationBadge(count) {
+            const notificationLink = document.querySelector('a[href*="notifications"]');
+            
+            if (!notificationLink) return;
+            
+            // Find existing badge or create a new one
+            let badge = notificationLink.querySelector('.notification-badge');
+            
+            if (count > 0) {
+                if (!badge) {
+                    // Create new badge if it doesn't exist
+                    badge = document.createElement('div');
+                    badge.className = 'bg-red-500 text-white text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1 notification-badge';
+                    notificationLink.appendChild(badge);
+                }
+                
+                // Update the count
+                badge.textContent = count;
+            } else if (badge) {
+                // Remove badge if count is 0
+                badge.remove();
+            }
+        }
+        
+        // Fetch notifications immediately
+        fetchNotificationCount();
+        
+        // Set up interval to check notifications every 5 seconds
+        setInterval(fetchNotificationCount, 5000);
+    });
+</script>

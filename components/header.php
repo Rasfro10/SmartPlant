@@ -34,5 +34,35 @@ $base = "http://localhost/smartplant/";
         body {
             font-family: 'Montserrat', sans-serif;
         }
+
+        /* Add this to the style section in your head tag */
+
+        /* Custom scrollbar styling */
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            /* Firefox */
+            scrollbar-color: rgba(156, 163, 175, 0.5) rgba(229, 231, 235, 0.5);
+            /* Firefox: thumb track */
+        }
+
+        /* WebKit browsers (Chrome, Safari, newer versions of Opera) */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(229, 231, 235, 0.5);
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: rgba(156, 163, 175, 0.5);
+            border-radius: 10px;
+            border: 2px solid transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(107, 114, 128, 0.7);
+        }
     </style>
 </head>
