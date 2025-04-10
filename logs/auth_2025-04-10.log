@@ -1,0 +1,8 @@
+2025-04-10 10:21:18 | User ID: 1 | Logout | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | User initiated logout
+2025-04-10 10:21:58 | User ID: 1 | Registration | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | New user registered
+2025-04-10 10:22:00 | User ID: 1 | Logout | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | User initiated logout
+2025-04-10 10:22:07 | User ID: 1 | Login | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | Successful login
+2025-04-10 10:22:39 | User ID: 1 | Logout | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | User initiated logout
+2025-04-10 10:22:55 | User ID: 2 | Registration | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | New user registered
+2025-04-10 10:22:58 | User ID: 2 | Logout | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | User initiated logout
+2025-04-10 10:23:06 | User ID: 2 | Login | IP: localhost | Browser: Chrome | OS: Mac OS X | Device: Desktop | Successful login

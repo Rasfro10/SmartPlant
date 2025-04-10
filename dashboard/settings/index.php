@@ -5,6 +5,46 @@ $page = "settings";
 
 // Include header
 include('../../components/header.php');
+
+// Get user details from database
+$user_id = $_SESSION["id"];
+$sql = "SELECT firstname, lastname, email, created_at FROM users WHERE id = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$stmt->bind_result($firstname, $lastname, $email, $created_at);
+$stmt->fetch();
+$stmt->close();
+
+// Format created_at date
+$member_since = date("d. F Y", strtotime($created_at));
+
+// Get user initials for avatar
+$initials = strtoupper(substr($firstname, 0, 1) . substr($lastname, 0, 1));
+
+// Get total plant count
+$plant_count_sql = "SELECT COUNT(*) FROM plants WHERE user_id = ?";
+$plant_count_stmt = $conn->prepare($plant_count_sql);
+$plant_count_stmt->bind_param("i", $user_id);
+$plant_count_stmt->execute();
+$plant_count_stmt->bind_result($plant_count);
+$plant_count_stmt->fetch();
+$plant_count_stmt->close();
+
+// Generate CSRF token for forms
+$csrf_token = generate_csrf_token();
+
+// Check for success/error messages
+$profile_success = isset($_SESSION['profile_success']) ? $_SESSION['profile_success'] : '';
+$profile_error = isset($_SESSION['profile_error']) ? $_SESSION['profile_error'] : '';
+$password_success = isset($_SESSION['password_success']) ? $_SESSION['password_success'] : '';
+$password_error = isset($_SESSION['password_error']) ? $_SESSION['password_error'] : '';
+
+// Clear session messages
+unset($_SESSION['profile_success']);
+unset($_SESSION['profile_error']);
+unset($_SESSION['password_success']);
+unset($_SESSION['password_error']);
 ?>
 
 <head>
@@ -39,6 +79,58 @@ include('../../components/header.php');
         .toggle-checkbox:checked+.toggle-label {
             background-color: #10b981;
         }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            overflow: auto;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 500px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-close {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .modal-close:hover {
+            color: #10b981;
+        }
+
+        /* Alert styles */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+
+        .alert-success {
+            background-color: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+
+        .alert-error {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border-left: 4px solid #ef4444;
+        }
     </style>
 </head>
 
@@ -71,10 +163,33 @@ include('../../components/header.php');
                         <h2 class="text-2xl font-bold text-gray-800">Indstillinger</h2>
                         <p class="text-gray-600">Tilpas din Smart Plant oplevelse</p>
                     </div>
-                    <button class="mt-3 md:mt-0 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition flex items-center">
-                        <i class="fas fa-save mr-2"></i> Gem ændringer
-                    </button>
                 </div>
+
+                <!-- Display success/error messages for profile update -->
+                <?php if (!empty($profile_success)): ?>
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle mr-2"></i> <?php echo $profile_success; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($profile_error)): ?>
+                    <div class="alert alert-error">
+                        <i class="fas fa-exclamation-circle mr-2"></i> <?php echo $profile_error; ?>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Display success/error messages for password change -->
+                <?php if (!empty($password_success)): ?>
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle mr-2"></i> <?php echo $password_success; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($password_error)): ?>
+                    <div class="alert alert-error">
+                        <i class="fas fa-exclamation-circle mr-2"></i> <?php echo $password_error; ?>
+                    </div>
+                <?php endif; ?>
 
                 <!-- User Profile Card -->
                 <div class="bg-white rounded-lg shadow-sm p-5 mb-6">
@@ -85,9 +200,9 @@ include('../../components/header.php');
                             </div>
                             <h4 class="font-bold text-gray-800 text-lg"><?php echo htmlspecialchars($firstname . ' ' . $lastname); ?></h4>
                             <p class="text-gray-600"><?php echo htmlspecialchars($email); ?></p>
-                            <p class="text-sm text-gray-500 mt-1">Medlem siden januar 2023</p>
+                            <p class="text-sm text-gray-500 mt-1">Medlem siden <?php echo $member_since; ?></p>
 
-                            <button class="mt-4 text-green-600 hover:text-green-800 font-medium flex items-center">
+                            <button id="edit-profile-btn" class="mt-4 text-green-600 hover:text-green-800 font-medium flex items-center">
                                 <i class="fas fa-pen mr-1"></i> Rediger profil
                             </button>
                         </div>
@@ -104,11 +219,11 @@ include('../../components/header.php');
                                 </div>
                                 <div>
                                     <p class="text-sm text-gray-500">Antal planter</p>
-                                    <p class="font-medium">8</p>
+                                    <p class="font-medium"><?php echo $plant_count; ?></p>
                                 </div>
                                 <div>
                                     <p class="text-sm text-gray-500">Registreret siden</p>
-                                    <p class="font-medium">25. januar 2023</p>
+                                    <p class="font-medium"><?php echo $member_since; ?></p>
                                 </div>
                                 <div>
                                     <p class="text-sm text-gray-500">Status</p>
@@ -119,7 +234,7 @@ include('../../components/header.php');
                             <div class="mt-4">
                                 <p class="font-medium text-gray-800 mb-2">Plant Expert Niveau</p>
                                 <div class="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-                                    <div class="bg-green-600 h-2.5 rounded-full" style="width: 25%"></div>
+                                    <div class="bg-green-600 h-2.5 rounded-full" style="width: <?php echo min($plant_count * 5, 100); ?>%"></div>
                                 </div>
                                 <div class="flex justify-between text-xs text-gray-500">
                                     <span>Begynder</span>
@@ -341,9 +456,9 @@ include('../../components/header.php');
                         <div>
                             <div class="mb-4">
                                 <p class="font-medium text-gray-800 mb-1">Adgangskode</p>
-                                <p class="text-sm text-gray-600">Sidst ændret for 2 måneder siden</p>
+                                <p class="text-sm text-gray-600">Skift din adgangskode regelmæssigt for øget sikkerhed</p>
                             </div>
-                            <button class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center">
+                            <button id="change-password-btn" class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center">
                                 <i class="fas fa-key mr-1"></i> Skift adgangskode
                             </button>
                         </div>
@@ -359,14 +474,86 @@ include('../../components/header.php');
                         </div>
                     </div>
                 </div>
+            </main>
+        </div>
+    </div>
 
-                <!-- Save Button Mobile -->
-                <div class="md:hidden flex justify-center mt-6 mb-4">
-                    <button class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg transition flex items-center w-full justify-center">
-                        <i class="fas fa-save mr-2"></i> Gem alle ændringer
+    <!-- Edit Profile Modal -->
+    <div id="edit-profile-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" id="close-profile-modal">&times;</span>
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Rediger Profil</h2>
+
+            <form action="update_profile.php" method="POST">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+
+                <div class="mb-4">
+                    <label for="firstname" class="block text-gray-700 text-sm font-medium mb-2">Fornavn</label>
+                    <input type="text" id="firstname" name="firstname" value="<?php echo htmlspecialchars($firstname); ?>"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" required>
+                </div>
+
+                <div class="mb-4">
+                    <label for="lastname" class="block text-gray-700 text-sm font-medium mb-2">Efternavn</label>
+                    <input type="text" id="lastname" name="lastname" value="<?php echo htmlspecialchars($lastname); ?>"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" required>
+                </div>
+
+                <div class="mb-6">
+                    <label for="email" class="block text-gray-700 text-sm font-medium mb-2">Email</label>
+                    <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($email); ?>"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" required>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="button" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg mr-2" id="cancel-profile-edit">
+                        Annuller
+                    </button>
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg">
+                        Gem ændringer
                     </button>
                 </div>
-            </main>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="change-password-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" id="close-password-modal">&times;</span>
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Skift Adgangskode</h2>
+
+            <form action="change_password.php" method="POST">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+
+                <div class="mb-4">
+                    <label for="current_password" class="block text-gray-700 text-sm font-medium mb-2">Nuværende adgangskode</label>
+                    <input type="password" id="current_password" name="current_password"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" required>
+                </div>
+
+                <div class="mb-4">
+                    <label for="new_password" class="block text-gray-700 text-sm font-medium mb-2">Ny adgangskode</label>
+                    <input type="password" id="new_password" name="new_password"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" required>
+                    <p class="text-xs text-gray-500 mt-1">Adgangskoden skal være mindst 8 tegn og indeholde bogstaver og tal</p>
+                </div>
+
+                <div class="mb-6">
+                    <label for="confirm_password" class="block text-gray-700 text-sm font-medium mb-2">Bekræft ny adgangskode</label>
+                    <input type="password" id="confirm_password" name="confirm_password"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" required>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="button" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg mr-2" id="cancel-password-change">
+                        Annuller
+                    </button>
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg">
+                        Skift adgangskode
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -380,18 +567,82 @@ include('../../components/header.php');
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('overlay');
 
+            // Edit Profile Modal Elements
+            const editProfileBtn = document.getElementById('edit-profile-btn');
+            const editProfileModal = document.getElementById('edit-profile-modal');
+            const closeProfileModal = document.getElementById('close-profile-modal');
+            const cancelProfileEdit = document.getElementById('cancel-profile-edit');
+
+            // Change Password Modal Elements
+            const changePasswordBtn = document.getElementById('change-password-btn');
+            const changePasswordModal = document.getElementById('change-password-modal');
+            const closePasswordModal = document.getElementById('close-password-modal');
+            const cancelPasswordChange = document.getElementById('cancel-password-change');
+
             // Toggle mobile menu
-            menuToggle.addEventListener('click', function() {
-                sidebar.classList.toggle('open');
-                overlay.classList.toggle('hidden');
-                document.body.classList.toggle('overflow-hidden');
-            });
+            if (menuToggle) {
+                menuToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('open');
+                    overlay.classList.toggle('hidden');
+                    document.body.classList.toggle('overflow-hidden');
+                });
+            }
 
             // Close menu when clicking overlay
-            overlay.addEventListener('click', function() {
-                sidebar.classList.remove('open');
-                overlay.classList.add('hidden');
-                document.body.classList.remove('overflow-hidden');
+            if (overlay) {
+                overlay.addEventListener('click', function() {
+                    sidebar.classList.remove('open');
+                    overlay.classList.add('hidden');
+                    document.body.classList.remove('overflow-hidden');
+                });
+            }
+
+            // Edit Profile Modal
+            if (editProfileBtn) {
+                editProfileBtn.addEventListener('click', function() {
+                    editProfileModal.style.display = 'block';
+                });
+            }
+
+            if (closeProfileModal) {
+                closeProfileModal.addEventListener('click', function() {
+                    editProfileModal.style.display = 'none';
+                });
+            }
+
+            if (cancelProfileEdit) {
+                cancelProfileEdit.addEventListener('click', function() {
+                    editProfileModal.style.display = 'none';
+                });
+            }
+
+            // Change Password Modal
+            if (changePasswordBtn) {
+                changePasswordBtn.addEventListener('click', function() {
+                    changePasswordModal.style.display = 'block';
+                });
+            }
+
+            if (closePasswordModal) {
+                closePasswordModal.addEventListener('click', function() {
+                    changePasswordModal.style.display = 'none';
+                });
+            }
+
+            if (cancelPasswordChange) {
+                cancelPasswordChange.addEventListener('click', function() {
+                    changePasswordModal.style.display = 'none';
+                });
+            }
+
+            // Close modals when clicking outside
+            window.addEventListener('click', function(event) {
+                if (event.target === editProfileModal) {
+                    editProfileModal.style.display = 'none';
+                }
+                if (event.target === changePasswordModal) {
+                    changePasswordModal.style.display = 'none';
+                }
             });
 
             // Handle window resize
@@ -402,6 +653,16 @@ include('../../components/header.php');
                     document.body.classList.remove('overflow-hidden');
                 }
             });
+
+            // Hide alert messages after 5 seconds
+            const alerts = document.querySelectorAll('.alert');
+            if (alerts.length > 0) {
+                setTimeout(function() {
+                    alerts.forEach(function(alert) {
+                        alert.style.display = 'none';
+                    });
+                }, 5000);
+            }
         });
     </script>
 </body>

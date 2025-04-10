@@ -1,7 +1,7 @@
 <?php
-// ini_set('display_errors', 1);
-// ini_set('display_startup_errors', 1);
-// error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 require_once $_SERVER['DOCUMENT_ROOT'] . '/smartplant/backend/auth/session_handler.php';
 
 // Set current page for sidebar highlighting
@@ -10,6 +10,7 @@ include('../components/header.php');
 
 // Include notification checker to ensure notifications are generated
 require_once __DIR__ . '/notifications/check_notifications.php';
+
 
 // Get user's plants from database
 $user_id = $_SESSION['id'];
@@ -190,17 +191,64 @@ if ($notification_stmt = $conn->prepare($notification_sql)) {
 
     $notification_stmt->close();
 }
+// Function to get watering activities
+function get_watering_activities($conn, $user_id, $limit = 10) {
+    $activities = [];
+    
+    $sql = "SELECT pd.watered_at, p.id AS plant_id, p.name AS plant_name 
+            FROM plant_data pd
+            JOIN plants p ON pd.plant_id = p.id
+            WHERE p.user_id = ? AND pd.watered_at IS NOT NULL
+            ORDER BY pd.watered_at DESC
+            LIMIT ?";
+            
+    if ($stmt = $conn->prepare($sql)) {
+        $stmt->bind_param("ii", $user_id, $limit);
+        
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
+            
+            while ($row = $result->fetch_assoc()) {
+                $activities[] = [
+                    'type' => 'water',
+                    'plant_id' => $row['plant_id'],
+                    'plant_name' => $row['plant_name'],
+                    'message' => 'er blevet vandet',
+                    'icon' => 'fa-tint',
+                    'icon_bg' => 'bg-blue-100',
+                    'icon_color' => 'text-blue-600',
+                    'bg_color' => 'bg-blue-50',
+                    'time' => $row['watered_at']
+                ];
+            }
+        }
+        
+        $stmt->close();
+    }
+    
+    return $activities;
+}
+// Get watering activities
+$watering_activities = get_watering_activities($conn, $user_id);
 
 // Sort plant status notifications by time (newest first)
 usort($plant_status_notifications, function ($a, $b) {
     return strtotime($b['time']) - strtotime($a['time']);
 });
 
-// Combine all notifications for display (prioritize database notifications)
+// Combine all notifications and activities for display
 $all_notifications = array_merge($db_notifications, $plant_status_notifications);
+$all_activities = array_merge($db_notifications, $plant_status_notifications, $watering_activities);
 
 // Sort all notifications by time (newest first)
 usort($all_notifications, function ($a, $b) {
+    $time_a = isset($a['scheduled_for']) ? $a['scheduled_for'] : $a['time'];
+    $time_b = isset($b['scheduled_for']) ? $b['scheduled_for'] : $b['time'];
+    return strtotime($time_b) - strtotime($time_a);
+});
+
+// Sort all activities by time (newest first)
+usort($all_activities, function ($a, $b) {
     $time_a = isset($a['scheduled_for']) ? $a['scheduled_for'] : $a['time'];
     $time_b = isset($b['scheduled_for']) ? $b['scheduled_for'] : $b['time'];
     return strtotime($time_b) - strtotime($time_a);
@@ -399,7 +447,7 @@ $default_plant_name = !empty($chart_plants) ? $chart_plants[0]['name'] : 'Ingen 
                     </div>
                 </div>
 
-                <?php if (count($all_notifications) > 0): ?>
+                <?php if (count($all_notifications) > 0 || count($watering_activities) > 0): ?>
                     <!-- Notifications & Recent Activity -->
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                         <!-- Notifications -->
@@ -476,15 +524,23 @@ $default_plant_name = !empty($chart_plants) ? $chart_plants[0]['name'] : 'Ingen 
                             <h3 class="font-bold text-gray-800 mb-4">Seneste Aktiviteter</h3>
                             <div class="space-y-3 overflow-y-auto max-h-64 pr-1 custom-scrollbar">
                                 <?php
-                                foreach ($all_notifications as $notification):
-                                    // Check if it's a database notification or a sensor-based notification
-                                    if (isset($notification['plant_id'])) {
+                                foreach ($all_activities as $activity):
+                                    // Check activity type
+                                    if (isset($activity['type']) && $activity['type'] === 'water' && isset($activity['message']) && $activity['message'] === 'er blevet vandet') {
+                                        // This is a watering activity
+                                        $plant_name = $activity['plant_name'];
+                                        $message = $activity['message'];
+                                        $icon = $activity['icon'];
+                                        $icon_bg = $activity['icon_bg'];
+                                        $icon_color = $activity['icon_color'];
+                                        $time = $activity['time'];
+                                    } elseif (isset($activity['plant_id'])) {
                                         // This is a database notification
-                                        $plant_name = $notification['plant_name'];
-                                        $time = $notification['scheduled_for'];
+                                        $plant_name = $activity['plant_name'];
+                                        $time = $activity['scheduled_for'];
 
                                         // Determine icon and colors based on notification_type
-                                        switch ($notification['notification_type']) {
+                                        switch ($activity['notification_type']) {
                                             case 'water':
                                                 $icon = 'fa-tint';
                                                 $icon_bg = 'bg-blue-100';
@@ -507,16 +563,16 @@ $default_plant_name = !empty($chart_plants) ? $chart_plants[0]['name'] : 'Ingen 
                                                 $icon = 'fa-exclamation-circle';
                                                 $icon_bg = 'bg-gray-100';
                                                 $icon_color = 'text-gray-600';
-                                                $message = $notification['message'];
+                                                $message = $activity['message'];
                                         }
                                     } else {
                                         // This is a sensor-based notification
-                                        $plant_name = $notification['plant_name'];
-                                        $message = $notification['message'];
-                                        $icon = $notification['icon'];
-                                        $icon_bg = $notification['icon_bg'];
-                                        $icon_color = $notification['icon_color'];
-                                        $time = $notification['time'];
+                                        $plant_name = $activity['plant_name'];
+                                        $message = $activity['message'];
+                                        $icon = $activity['icon'];
+                                        $icon_bg = $activity['icon_bg'];
+                                        $icon_color = $activity['icon_color'];
+                                        $time = $activity['time'];
                                     }
                                 ?>
                                     <div class="flex items-start border-b border-gray-100 pb-3">
@@ -575,7 +631,7 @@ $default_plant_name = !empty($chart_plants) ? $chart_plants[0]['name'] : 'Ingen 
                                                     <a href="./mine-planter/edit-plant.php?id=<?php echo $plant_data['plant']['id']; ?>" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                                         <i class="fas fa-edit mr-2"></i> Rediger
                                                     </a>
-                                                    <a href="#" class="water-plant-btn block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-plant-id="<?php echo $plant_data['plant']['id']; ?>">
+                                                    <a href="#" class="water-plant-btn block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-plant-id="<?php echo $plant_data['plant']['id']; ?>" data-plant-name="<?php echo htmlspecialchars($plant_data['plant']['name']); ?>">
                                                         <i class="fas fa-tint mr-2"></i> Marker som vandet
                                                     </a>
                                                 </div>
@@ -692,6 +748,14 @@ $default_plant_name = !empty($chart_plants) ? $chart_plants[0]['name'] : 'Ingen 
     <!-- Mobile overlay when sidebar is open -->
     <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden md:hidden"></div>
 
+    <!-- Watering Success Toast Notification -->
+    <div id="water-toast" class="fixed bottom-4 right-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md hidden">
+        <div class="flex items-center">
+            <div class="py-1"><i class="fas fa-tint text-green-500 mr-3"></i></div>
+            <div id="water-toast-message">Planten er blevet markeret som vandet</div>
+        </div>
+    </div>
+
     <!-- Include Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -701,6 +765,8 @@ $default_plant_name = !empty($chart_plants) ? $chart_plants[0]['name'] : 'Ingen 
             const menuToggle = document.getElementById('menu-toggle');
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('overlay');
+            const waterToast = document.getElementById('water-toast');
+            const waterToastMessage = document.getElementById('water-toast-message');
 
             // Toggle mobile menu
             menuToggle.addEventListener('click', function() {
@@ -790,6 +856,16 @@ $default_plant_name = !empty($chart_plants) ? $chart_plants[0]['name'] : 'Ingen 
                 });
             }
 
+            // Function to show toast notification
+            function showToast(message, duration = 3000) {
+                waterToastMessage.textContent = message;
+                waterToast.classList.remove('hidden');
+
+                setTimeout(() => {
+                    waterToast.classList.add('hidden');
+                }, duration);
+            }
+
             // Handle "Mark as watered" button
             const waterButtons = document.querySelectorAll('.water-plant-btn');
             waterButtons.forEach(btn => {
@@ -798,9 +874,57 @@ $default_plant_name = !empty($chart_plants) ? $chart_plants[0]['name'] : 'Ingen 
                     e.stopPropagation();
 
                     const plantId = this.getAttribute('data-plant-id');
-                    alert('Plante markeret som vandet! (Plant ID: ' + plantId + ')');
+                    const plantName = this.getAttribute('data-plant-name');
 
-                    // Her ville du normalt lave et AJAX kald til serveren for at opdatere databasen
+                    // Create form data
+                    const formData = new FormData();
+                    formData.append('action', 'water_plant');
+                    formData.append('plant_id', plantId);
+
+                    // Send AJAX request
+                    fetch('water_plant.php', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                showToast(`${plantName} er blevet markeret som vandet`);
+
+                                // Add the watering activity to the Recent Activity section
+                                const activitiesContainer = document.querySelector('.lg\\:col-span-2 .custom-scrollbar');
+                                if (activitiesContainer) {
+                                    const wateringActivity = document.createElement('div');
+                                    wateringActivity.className = 'flex items-start border-b border-gray-100 pb-3';
+                                    wateringActivity.innerHTML = `
+                                    <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                                        <i class="fas fa-tint text-blue-600"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="text-gray-800"><span class="font-medium">${plantName}</span> er blevet vandet</p>
+                                        <p class="text-gray-500 text-xs">lige nu</p>
+                                    </div>
+                                `;
+
+                                    // Insert at the top
+                                    if (activitiesContainer.firstChild) {
+                                        activitiesContainer.insertBefore(wateringActivity, activitiesContainer.firstChild);
+                                    } else {
+                                        activitiesContainer.appendChild(wateringActivity);
+                                    }
+                                }
+
+                                // Refresh data to update UI
+                                refreshSensorData();
+                            } else {
+                                showToast('Der opstod en fejl. Prøv igen.');
+                                console.error('Error marking plant as watered:', data.message);
+                            }
+                        })
+                        .catch(error => {
+                            showToast('Der opstod en fejl. Prøv igen.');
+                            console.error('Error:', error);
+                        });
                 });
             });
 
